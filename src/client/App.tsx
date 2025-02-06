@@ -63,7 +63,7 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
   return isConnected;
 }
 
-function RequestCard({ request }: { request: StoredRequest }) {
+function RequestCard({ request }: { request: StoredRequest & { clientKey: string } }) {
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-200 hover:shadow-lg border border-gray-200 group">
       {/* Header - Always visible */}
@@ -286,15 +286,27 @@ function RequestCard({ request }: { request: StoredRequest }) {
 }
 
 function App() {
-  const [requests, setRequests] = useState<StoredRequest[]>([]);
+  const [requests, setRequests] = useState<(StoredRequest & { clientKey: string })[]>([]);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [requestCounter, setRequestCounter] = useState(0);
+
+  // Function to generate a unique client-side key
+  const generateClientKey = useCallback((request: StoredRequest) => {
+    const key = `${request.timestamp}-${request.compact.id}-${requestCounter}`;
+    setRequestCounter(prev => prev + 1);
+    return key;
+  }, [requestCounter]);
 
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === 'newRequest') {
-      setRequests(prev => [data.payload, ...prev]);
+      const requestWithKey = {
+        ...data.payload,
+        clientKey: generateClientKey(data.payload)
+      };
+      setRequests(prev => [requestWithKey, ...prev]);
     }
-  }, []);
+  }, [generateClientKey]);
 
   const isWsConnected = useWebSocket('ws://localhost:3001', handleWebSocketMessage);
 
@@ -305,7 +317,11 @@ function App() {
         const response = await fetch('http://localhost:3001/api/broadcasts');
         if (!response.ok) throw new Error('Failed to fetch requests');
         const data = await response.json();
-        setRequests(data);
+        const requestsWithKeys = data.map((request: StoredRequest) => ({
+          ...request,
+          clientKey: generateClientKey(request)
+        }));
+        setRequests(requestsWithKeys);
         setError('');
       } catch (err) {
         setError('Failed to fetch broadcast requests');
@@ -316,7 +332,7 @@ function App() {
     };
 
     fetchRequests();
-  }, []);
+  }, [generateClientKey]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -353,7 +369,7 @@ function App() {
 
         <div className="space-y-4">
           {requests.map((request) => (
-            <RequestCard key={request.compact.id} request={request} />
+            <RequestCard key={request.clientKey} request={request} />
           ))}
 
           {!isLoading && requests.length === 0 && !error && (
