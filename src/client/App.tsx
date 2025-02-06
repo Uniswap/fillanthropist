@@ -44,16 +44,28 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
     if (!shouldReconnect) return;
 
     try {
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
+      // Clean up any existing connection first
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
 
+      const ws = new WebSocket(url);
+      
+      // Set up all handlers before any operations can occur
       ws.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        reconnectAttemptsRef.current = 0; // Reset reconnection attempts on successful connection
+        // Only set connection state after WebSocket is fully ready
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            console.log('WebSocket connected and ready');
+            setIsConnected(true);
+            reconnectAttemptsRef.current = 0; // Reset reconnection attempts on successful connection
+            wsRef.current = ws; // Assign ref only after connection is confirmed ready
+          }
+        }, 100); // Small delay to ensure WebSocket is stable
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = async (event) => {
         const closeTime = new Date().toISOString();
         console.log(`[${closeTime}] WebSocket disconnected with code ${event.code}`);
         if (event.reason) console.log(`[${closeTime}] Close reason:`, event.reason);
@@ -65,15 +77,16 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
           reconnectTimeoutRef.current = null;
         }
         
-        // Schedule reconnection with exponential backoff
-        if (shouldReconnect) {
+        // Only attempt reconnection if we should and the connection was previously established
+        if (shouldReconnect && event.code !== 1006) {
           const delay = getReconnectDelay();
           console.log(`[${closeTime}] Attempting to reconnect in ${delay/1000} seconds...`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            // Reset WebSocket reference before reconnecting
-            wsRef.current = null;
-            connect();
-          }, delay);
+          reconnectTimeoutRef.current = setTimeout(connect, delay);
+        } else if (event.code === 1006) {
+          // For connection failures, add a small delay before retry
+          console.log(`[${closeTime}] Connection failed, retrying after stabilization...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          connect();
         }
       };
 
