@@ -11,7 +11,14 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/broadcast': 'http://localhost:3001'
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      '/broadcast': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
     }
   }
 });

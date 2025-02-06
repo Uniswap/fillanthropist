@@ -2,17 +2,27 @@ import express from 'express';
 import cors from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
 import type { BroadcastRequest } from '../types/broadcast';
 import { broadcastStore } from './store';
+import { WebSocketManager } from './websocket';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 3001;
 
+// Initialize WebSocket manager
+const wsManager = new WebSocketManager(server);
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3001'],
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Serve static files from the dist directory
@@ -39,8 +49,15 @@ app.post('/broadcast', (req, res) => {
   try {
     const payload = req.body as BroadcastRequest;
     
-    // Store the request
-    broadcastStore.addRequest(payload);
+    // Add timestamp and store the request
+    const storedRequest = {
+      ...payload,
+      timestamp: Date.now()
+    };
+    broadcastStore.addRequest(storedRequest);
+    
+    // Broadcast to all connected WebSocket clients
+    wsManager.broadcastRequest(storedRequest);
     
     // Log the received payload
     console.log('Received broadcast request:', {
@@ -72,6 +89,7 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, '../../dist/index.html'));
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`WebSocket server is ready`);
 });
