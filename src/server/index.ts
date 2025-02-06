@@ -45,9 +45,47 @@ app.get('/api/broadcasts/:id', (req, res) => {
 });
 
 // Broadcast endpoint
+// Validation helpers
+const isValidHexString = (value: string) => {
+  if (!value.startsWith('0x')) return false;
+  const hex = value.slice(2);
+  return hex.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(hex);
+};
+
+const isValidAddress = (value: string) => {
+  if (!value.startsWith('0x')) return false;
+  const hex = value.slice(2);
+  return hex.length === 40 && /^[0-9a-fA-F]+$/.test(hex);
+};
+
 app.post('/broadcast', (req, res) => {
   try {
     const payload = req.body as BroadcastRequest;
+
+    // Validate addresses
+    if (!isValidAddress(payload.compact.arbiter)) {
+      throw new Error('Invalid arbiter address format');
+    }
+    if (!isValidAddress(payload.compact.sponsor)) {
+      throw new Error('Invalid sponsor address format');
+    }
+    if (!isValidAddress(payload.compact.mandate.tribunal)) {
+      throw new Error('Invalid tribunal address format');
+    }
+    if (!isValidAddress(payload.compact.mandate.recipient)) {
+      throw new Error('Invalid recipient address format');
+    }
+    if (!isValidAddress(payload.compact.mandate.token)) {
+      throw new Error('Invalid token address format');
+    }
+
+    // Validate signatures
+    if (!isValidHexString(payload.sponsorSignature)) {
+      throw new Error('Invalid sponsor signature format');
+    }
+    if (!isValidHexString(payload.allocatorSignature)) {
+      throw new Error('Invalid allocator signature format');
+    }
     
     // Add timestamp and store the request
     const storedRequest = {
@@ -59,14 +97,6 @@ app.post('/broadcast', (req, res) => {
     // Broadcast to all connected WebSocket clients
     wsManager.broadcastRequest(storedRequest);
     
-    // Log the received payload
-    console.log('Received broadcast request:', {
-      chainId: payload.chainId,
-      sponsor: payload.compact.sponsor,
-      id: payload.compact.id,
-      expires: payload.compact.expires,
-    });
-
     // Clean up old requests (older than 24 hours)
     broadcastStore.clearOldRequests();
 
@@ -79,7 +109,7 @@ app.post('/broadcast', (req, res) => {
     console.error('Error processing broadcast request:', error);
     res.status(400).json({
       success: false,
-      error: 'Invalid broadcast request'
+      error: error instanceof Error ? error.message : 'Invalid broadcast request'
     });
   }
 });

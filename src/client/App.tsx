@@ -266,13 +266,13 @@ function RequestCard({ request }: { request: StoredRequest }) {
                   <div className="bg-white px-2 py-1 rounded border border-gray-200">
                     <span className="font-mono text-xs">
                       <span className="text-gray-500">Sponsor Signature: </span>
-                      <span className="break-all">{request.sponsorSignature}</span>
+                      <span className="break-all">{String(request.sponsorSignature)}</span>
                     </span>
                   </div>
                   <div className="bg-white px-2 py-1 rounded border border-gray-200">
                     <span className="font-mono text-xs">
                       <span className="text-gray-500">Allocator Signature: </span>
-                      <span className="break-all">{request.allocatorSignature}</span>
+                      <span className="break-all">{String(request.allocatorSignature)}</span>
                     </span>
                   </div>
                 </dl>
