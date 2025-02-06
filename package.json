@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev:frontend": "vite",
-    "dev:server": "nodemon --exec ts-node src/server/index.ts",
+    "dev:server": "nodemon --exec tsx src/server/index.ts",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
     "build": "tsc && vite build",
     "serve": "vite preview",
@@ -44,7 +44,7 @@
     "nodemon": "^3.1.9",
     "postcss": "^8.5.1",
     "tailwindcss": "^4.0.4",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   }
