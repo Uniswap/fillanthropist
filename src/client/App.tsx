@@ -30,40 +30,127 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
   const [shouldReconnect, setShouldReconnect] = useState(true);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectDelay = 30000; // Maximum reconnect delay of 30 seconds
+
+  const getReconnectDelay = useCallback(() => {
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, up to maxReconnectDelay
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), maxReconnectDelay);
+    reconnectAttemptsRef.current++;
+    return delay;
+  }, []);
 
   const connect = useCallback(() => {
     if (!shouldReconnect) return;
 
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    try {
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-    };
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        setIsConnected(true);
+        reconnectAttemptsRef.current = 0; // Reset reconnection attempts on successful connection
+      };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-      
-      // Schedule reconnection
+      ws.onclose = (event) => {
+        const closeTime = new Date().toISOString();
+        console.log(`[${closeTime}] WebSocket disconnected with code ${event.code}`);
+        if (event.reason) console.log(`[${closeTime}] Close reason:`, event.reason);
+        setIsConnected(false);
+        
+        // Clear any existing reconnect timeout
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+        
+        // Schedule reconnection with exponential backoff
+        if (shouldReconnect) {
+          const delay = getReconnectDelay();
+          console.log(`[${closeTime}] Attempting to reconnect in ${delay/1000} seconds...`);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            // Reset WebSocket reference before reconnecting
+            wsRef.current = null;
+            connect();
+          }, delay);
+        }
+      };
+
+      // Add ping/pong handling
+      let pingTimeout: NodeJS.Timeout | null = null;
+      const heartbeat = () => {
+        if (pingTimeout) clearTimeout(pingTimeout);
+        // Use `any` to handle custom property
+        (ws as any).isAlive = true;
+        pingTimeout = setTimeout(() => {
+          console.log('Ping timeout - closing connection');
+          ws.close();
+        }, 35000); // slightly longer than server's ping interval
+      };
+
+      ws.addEventListener('open', heartbeat);
+      ws.addEventListener('ping', heartbeat);
+      ws.addEventListener('pong', heartbeat);
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          // Always do heartbeat first
+          heartbeat();
+          
+          if (data.type === 'ping') {
+            // Respond to server ping
+            ws.send(JSON.stringify({ type: 'pong' }));
+          } else if (data.type === 'connected') {
+            console.log('Received connection confirmation:', data);
+          } else if (data.type === 'newRequest') {
+            // Process the request and then confirm receipt
+            onMessage(data);
+            ws.send(JSON.stringify({ 
+              type: 'requestReceived',
+              requestId: data.payload.compact.id,
+              timestamp: new Date().toISOString()
+            }));
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      // Add error event handler with reconnection logic
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // Only attempt reconnect if the connection is actually closed
+        if (ws.readyState === WebSocket.CLOSED) {
+          const delay = getReconnectDelay();
+          console.log(`Error occurred. Reconnecting in ${delay/1000} seconds...`);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            wsRef.current = null;
+            connect();
+          }, delay);
+        }
+      };
+
+      return () => {
+        if (pingTimeout) clearTimeout(pingTimeout);
+      };
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      // Schedule reconnection on connection error
       if (shouldReconnect) {
-        console.log('Attempting to reconnect in 3 seconds...');
+        const delay = getReconnectDelay();
+        console.log(`Error connecting. Retrying in ${delay/1000} seconds...`);
         reconnectTimeoutRef.current = setTimeout(() => {
           connect();
-        }, 3000);
+        }, delay);
       }
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
-  }, [url, onMessage, shouldReconnect]);
+    }
+  }, [url, onMessage, shouldReconnect, getReconnectDelay]);
 
   useEffect(() => {
     connect();
@@ -277,7 +364,7 @@ function App() {
     }
   }, [generateClientKey]);
 
-  const isWsConnected = useWebSocket('ws://localhost:3001', handleWebSocketMessage);
+  const isWsConnected = useWebSocket('ws://localhost:3001/ws', handleWebSocketMessage);
 
   // Initial fetch of existing requests
   useEffect(() => {

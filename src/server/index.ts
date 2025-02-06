@@ -19,10 +19,14 @@ const wsManager = new WebSocketManager(server);
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3001'],
-  methods: ['GET', 'POST'],
-  credentials: true
+  origin: ['http://localhost:5173', 'http://localhost:3001', 'ws://localhost:3001'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Handle preflight requests for WebSocket
+app.options('/ws', cors());
 app.use(express.json());
 
 // Serve static files from the dist directory
@@ -58,9 +62,13 @@ const isValidAddress = (value: string) => {
   return hex.length === 40 && /^[0-9a-fA-F]+$/.test(hex);
 };
 
-app.post('/broadcast', (req, res) => {
+app.post('/broadcast', async (req, res) => {
+  const requestTime = new Date().toISOString();
+  console.log(`[${requestTime}] Received POST request to /broadcast`);
+  
   try {
     const payload = req.body as BroadcastRequest;
+    console.log(`[${requestTime}] Processing broadcast request ID: ${payload.compact.id}`);
 
     // Validate addresses
     if (!isValidAddress(payload.compact.arbiter)) {
@@ -94,17 +102,42 @@ app.post('/broadcast', (req, res) => {
     };
     broadcastStore.addRequest(storedRequest);
     
-    // Broadcast to all connected WebSocket clients
-    wsManager.broadcastRequest(storedRequest);
+    // Log WebSocket client count before broadcast
+    console.log(`[${requestTime}] Current WebSocket clients before broadcast: ${wsManager.getClientCount()}`);
+
+    try {
+      // Broadcast to WebSocket clients with a timeout
+      const broadcastPromise = wsManager.broadcastRequest(storedRequest);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Broadcast timeout')), 10000); // 10 second timeout
+      });
+
+      // Race between broadcast and timeout
+      await Promise.race([broadcastPromise, timeoutPromise]);
+
+      // Send successful response
+      console.log(`[${requestTime}] Sending HTTP response for request ID: ${payload.compact.id}`);
+      res.json({
+        success: true,
+        message: 'Broadcast request received and processed',
+        requestId: payload.compact.id
+      });
+
+      // Log completion
+      console.log(`[${requestTime}] Completed processing broadcast request ID: ${payload.compact.id}`);
+    } catch (broadcastError) {
+      console.error(`[${requestTime}] Error in WebSocket broadcast:`, broadcastError);
+      // Still return success since we stored the request, but include warning
+      res.json({
+        success: true,
+        message: 'Broadcast request received but WebSocket broadcast had issues',
+        requestId: payload.compact.id,
+        warning: 'Some connected clients may not have received the broadcast'
+      });
+    }
     
     // Clean up old requests (older than 24 hours)
     broadcastStore.clearOldRequests();
-
-    res.json({
-      success: true,
-      message: 'Broadcast request received',
-      requestId: payload.compact.id
-    });
   } catch (error) {
     console.error('Error processing broadcast request:', error);
     res.status(400).json({
