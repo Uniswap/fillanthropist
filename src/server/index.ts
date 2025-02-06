@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { BroadcastRequest } from '../types/broadcast.js';
+import type { BroadcastRequest } from '../types/broadcast';
+import { broadcastStore } from './store';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,10 +18,29 @@ app.use(express.json());
 // Serve static files from the dist directory
 app.use(express.static(join(__dirname, '../../dist')));
 
+// Get all broadcast requests
+app.get('/api/broadcasts', (req, res) => {
+  const requests = broadcastStore.getRequests();
+  res.json(requests);
+});
+
+// Get a specific broadcast request
+app.get('/api/broadcasts/:id', (req, res) => {
+  const request = broadcastStore.getRequest(req.params.id);
+  if (request) {
+    res.json(request);
+  } else {
+    res.status(404).json({ error: 'Broadcast request not found' });
+  }
+});
+
 // Broadcast endpoint
 app.post('/broadcast', (req, res) => {
   try {
     const payload = req.body as BroadcastRequest;
+    
+    // Store the request
+    broadcastStore.addRequest(payload);
     
     // Log the received payload
     console.log('Received broadcast request:', {
@@ -30,7 +50,9 @@ app.post('/broadcast', (req, res) => {
       expires: payload.compact.expires,
     });
 
-    // For now, just acknowledge receipt
+    // Clean up old requests (older than 24 hours)
+    broadcastStore.clearOldRequests();
+
     res.json({
       success: true,
       message: 'Broadcast request received',
