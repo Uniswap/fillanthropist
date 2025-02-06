@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { BroadcastRequest } from '../types/broadcast';
 
 interface StoredRequest extends BroadcastRequest {
@@ -27,9 +27,15 @@ const formatTimestamp = (timestamp: string) => {
 
 function useWebSocket(url: string, onMessage: (data: any) => void) {
   const [isConnected, setIsConnected] = useState(false);
+  const [shouldReconnect, setShouldReconnect] = useState(true);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
+  const connect = useCallback(() => {
+    if (!shouldReconnect) return;
+
     const ws = new WebSocket(url);
+    wsRef.current = ws;
 
     ws.onopen = () => {
       console.log('WebSocket connected');
@@ -39,11 +45,14 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
     ws.onclose = () => {
       console.log('WebSocket disconnected');
       setIsConnected(false);
-      // Try to reconnect in 3 seconds
-      setTimeout(() => {
-        console.log('Attempting to reconnect...');
-        useWebSocket(url, onMessage);
-      }, 3000);
+      
+      // Schedule reconnection
+      if (shouldReconnect) {
+        console.log('Attempting to reconnect in 3 seconds...');
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connect();
+        }, 3000);
+      }
     };
 
     ws.onmessage = (event) => {
@@ -54,11 +63,21 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
         console.error('Error parsing WebSocket message:', error);
       }
     };
+  }, [url, onMessage, shouldReconnect]);
+
+  useEffect(() => {
+    connect();
 
     return () => {
-      ws.close();
+      setShouldReconnect(false);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
-  }, [url, onMessage]);
+  }, [connect]);
 
   return isConnected;
 }
