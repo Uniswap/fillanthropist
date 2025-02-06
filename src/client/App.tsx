@@ -117,24 +117,42 @@ function RequestCard({ request }: { request: StoredRequest }) {
               {/* Compact Message Section */}
               <section>
                 <h4 className="font-medium mb-3 text-sm text-gray-700 uppercase tracking-wider">Compact Message</h4>
-                <dl className="grid gap-y-2 text-sm">
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Arbiter</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">{request.compact.arbiter}</dd>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Arbiter: </span>
+                      {request.compact.arbiter}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Sponsor</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">{request.compact.sponsor}</dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Sponsor: </span>
+                      {request.compact.sponsor}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Nonce</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">{request.compact.nonce}</dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">ID: </span>
+                      {request.compact.id}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Expires</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Amount: </span>
+                      {formatAmount(request.compact.amount)}
+                    </span>
+                  </div>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Nonce: </span>
+                      {request.compact.nonce}
+                    </span>
+                  </div>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Expires: </span>
                       {formatTimestamp(request.compact.expires)}
-                    </dd>
+                    </span>
                   </div>
                 </dl>
               </section>
@@ -142,30 +160,50 @@ function RequestCard({ request }: { request: StoredRequest }) {
               {/* Context Section */}
               <section>
                 <h4 className="font-medium mb-3 text-sm text-gray-700 uppercase tracking-wider">Context</h4>
-                <dl className="grid gap-y-2 text-sm">
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Spot Output</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                      {formatAmount(request.context.spotOutputAmount, 8)}
-                    </dd>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="col-span-2 flex gap-2">
+                    <div className="flex-1 bg-white px-2 py-1 rounded border border-gray-200">
+                      <span className="font-mono text-xs">
+                        <span className="text-gray-500">Spot: </span>
+                        {formatAmount(request.context.spotOutputAmount, 8)}
+                      </span>
+                    </div>
+                    <div className="flex-1 bg-white px-2 py-1 rounded border border-gray-200">
+                      <span className="font-mono text-xs">
+                        <span className="text-gray-500">Direct: </span>
+                        {formatAmount(request.context.quoteOutputAmountDirect, 8)}
+                      </span>
+                    </div>
+                    <div className="flex-1 bg-white px-2 py-1 rounded border border-gray-200">
+                      <span className="font-mono text-xs">
+                        <span className="text-gray-500">Net: </span>
+                        {formatAmount(request.context.quoteOutputAmountNet, 8)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Direct Output</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                      {formatAmount(request.context.quoteOutputAmountDirect, 8)}
-                    </dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Dispensation: </span>
+                      {formatAmount(request.context.dispensation)}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Net Output</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                      {formatAmount(request.context.quoteOutputAmountNet, 8)}
-                    </dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">USD: </span>
+                      ${request.context.dispensationUSD}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Witness Hash</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                      {request.context.witnessHash}
-                    </dd>
+                  <div className="col-span-2 bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Witness Type: </span>
+                      <span className="break-all">{request.context.witnessTypeString}</span>
+                    </span>
+                  </div>
+                  <div className="col-span-2 bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Witness Hash: </span>
+                      <span className="break-all">{request.context.witnessHash}</span>
+                    </span>
                   </div>
                 </dl>
               </section>
@@ -175,36 +213,48 @@ function RequestCard({ request }: { request: StoredRequest }) {
               {/* Mandate Section */}
               <section>
                 <h4 className="font-medium mb-3 text-sm text-gray-700 uppercase tracking-wider">Mandate</h4>
-                <dl className="grid gap-y-2 text-sm">
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Tribunal</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">{request.compact.mandate.tribunal}</dd>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Tribunal: </span>
+                      {request.compact.mandate.tribunal}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Recipient</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">{request.compact.mandate.recipient}</dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Recipient: </span>
+                      {request.compact.mandate.recipient}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Token</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">{request.compact.mandate.token}</dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Token: </span>
+                      {request.compact.mandate.token}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Priority Fee</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Expires: </span>
+                      {formatTimestamp(request.compact.mandate.expires)}
+                    </span>
+                  </div>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Priority Fee: </span>
                       {formatAmount(request.compact.mandate.baselinePriorityFee, 8)}
-                    </dd>
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Scale Factor</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Scale Factor: </span>
                       {request.compact.mandate.scalingFactor}
-                    </dd>
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[120px,1fr] gap-x-4">
-                    <dt className="text-gray-500">Salt</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200">
-                      {request.compact.mandate.salt}
-                    </dd>
+                  <div className="col-span-2 bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Salt: </span>
+                      <span className="break-all">{request.compact.mandate.salt}</span>
+                    </span>
                   </div>
                 </dl>
               </section>
@@ -212,18 +262,18 @@ function RequestCard({ request }: { request: StoredRequest }) {
               {/* Signatures Section */}
               <section>
                 <h4 className="font-medium mb-3 text-sm text-gray-700 uppercase tracking-wider">Signatures</h4>
-                <dl className="grid gap-y-2 text-sm">
-                  <div>
-                    <dt className="text-gray-500 mb-1">Sponsor</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200 break-all">
-                      {request.sponsorSignature}
-                    </dd>
+                <dl className="grid gap-2 text-sm">
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Sponsor Signature: </span>
+                      <span className="break-all">{request.sponsorSignature}</span>
+                    </span>
                   </div>
-                  <div>
-                    <dt className="text-gray-500 mb-1">Allocator</dt>
-                    <dd className="font-mono text-xs bg-white px-2 py-1 rounded border border-gray-200 break-all">
-                      {request.allocatorSignature}
-                    </dd>
+                  <div className="bg-white px-2 py-1 rounded border border-gray-200">
+                    <span className="font-mono text-xs">
+                      <span className="text-gray-500">Allocator Signature: </span>
+                      <span className="break-all">{request.allocatorSignature}</span>
+                    </span>
                   </div>
                 </dl>
               </section>
