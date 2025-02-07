@@ -233,9 +233,16 @@ function App() {
 
   const { sendMessage, lastMessage, readyState } = useWebSocket('ws://localhost:3001/ws', {
     protocols: ['fillanthropist-protocol'],
-    reconnectAttempts: 10,
-    reconnectInterval: 3000,
-    shouldReconnect: (closeEvent) => true,
+    // Connection options
+    reconnectAttempts: 20,
+    reconnectInterval: 1000,
+    share: true, // Share a single WebSocket instance
+    retryOnError: true,
+    filter: () => true, // Process all messages
+    heartbeat: false, // Let the server handle heartbeats
+    shouldReconnect: () => true,
+    
+    // Event handlers
     onMessage: async (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -259,12 +266,7 @@ function App() {
     },
     onOpen: () => console.log('WebSocket connected and ready'),
     onClose: (event) => console.log(`WebSocket disconnected with code ${event.code}`, event.reason),
-    onError: (error) => console.error('WebSocket error:', error),
-    heartbeat: {
-      message: JSON.stringify({ type: 'ping' }),
-      returnMessage: JSON.stringify({ type: 'pong' }),
-      timeout: 30000,
-    }
+    onError: (error) => console.error('WebSocket error:', error)
   });
 
   const isWsConnected = readyState === ReadyState.OPEN;

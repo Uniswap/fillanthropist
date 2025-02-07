@@ -43,8 +43,10 @@ export class WebSocketManager {
           return ws.terminate();
         }
         (ws as any).isAlive = false;
+        // Send both WebSocket-level ping and application-level ping
         ws.ping();
-      }, 30000);
+        ws.send(JSON.stringify({ type: 'ping' }));
+      }, 5000); // More frequent pings
 
       ws.on('pong', () => {
         (ws as any).isAlive = true;
@@ -93,7 +95,14 @@ export class WebSocketManager {
       ws.on('message', (data) => {
         try {
           const message = JSON.parse(data.toString());
-          if (message.type === 'requestReceived') {
+          if (message.type === 'ping') {
+            // Handle application-level ping
+            (ws as any).isAlive = true;
+            ws.send(JSON.stringify({ type: 'pong' }));
+          } else if (message.type === 'pong') {
+            // Handle application-level pong
+            (ws as any).isAlive = true;
+          } else if (message.type === 'requestReceived') {
             const receiptTime = new Date().toISOString();
             console.log(`[${receiptTime}] Client acknowledged request ${message.requestId}`);
             // Keep the connection alive by sending a confirmation
