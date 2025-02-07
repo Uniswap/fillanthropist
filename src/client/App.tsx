@@ -6,13 +6,12 @@ interface StoredRequest extends BroadcastRequest {
   timestamp: number;
 }
 
-// Helper function to format large numbers with optional decimals
-const formatAmount = (amount: string | undefined, decimals = 6) => {
+// Helper function to format amounts - passing through raw values
+const formatAmount = (amount: string | undefined) => {
   if (!amount) return '0';
   try {
-    const num = BigInt(amount);
-    const eth = Number(num) / 1e18;
-    return eth.toFixed(decimals);
+    // Just return the raw amount string
+    return amount;
   } catch (error) {
     console.error('Error formatting amount:', error);
     return '0';
@@ -83,7 +82,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
           <section>
             <h4 className="text-sm font-medium text-gray-300 uppercase tracking-wider mb-3">Compact Message</h4>
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Arbiter: </span>
                   <span className="text-gray-100">{request.compact.arbiter}</span>
@@ -119,25 +118,25 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="flex gap-2">
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Spot: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.spotOutputAmount, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.spotOutputAmount)}</span>
                 </div>
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Direct: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountDirect, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountDirect)}</span>
                 </div>
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Net: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountNet, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountNet)}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Dispensation: </span>
                   <span className="text-gray-100">{formatAmount(request.context?.dispensation)}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">USD: </span>
-                  <span className="text-gray-100">${request.context?.dispensationUSD ?? '0'}</span>
+                  <span className="text-gray-100">{request.context?.dispensationUSD?.replace('$', '') ?? '0'}</span>
                 </div>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
@@ -157,7 +156,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
           <section>
             <h4 className="text-sm font-medium text-gray-300 uppercase tracking-wider mb-3">Mandate</h4>
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Tribunal: </span>
                   <span className="text-gray-100">{request.compact.mandate.tribunal}</span>
@@ -176,7 +175,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Priority Fee: </span>
-                  <span className="text-gray-100">{formatAmount(request.compact.mandate.baselinePriorityFee, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.compact.mandate.baselinePriorityFee)}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Scale Factor: </span>
