@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import useWebSocket, { ReadyState } from 'react-use-websocket';
 import type { BroadcastRequest } from '../types/broadcast';
 
 interface StoredRequest extends BroadcastRequest {
@@ -30,180 +31,6 @@ const formatTimestamp = (timestamp: string) => {
     second: '2-digit'
   });
 };
-
-function useWebSocket(url: string, onMessage: (data: any) => void) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [shouldReconnect, setShouldReconnect] = useState(true);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectDelay = 30000; // Maximum reconnect delay of 30 seconds
-
-  const getReconnectDelay = useCallback(() => {
-    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, up to maxReconnectDelay
-    const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), maxReconnectDelay);
-    reconnectAttemptsRef.current++;
-    return delay;
-  }, []);
-
-  const connect = useCallback(() => {
-    if (!shouldReconnect) return;
-
-    try {
-      // Clean up any existing connection first
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-
-      const ws = new WebSocket(url);
-      
-      // Set up all handlers before any operations can occur
-      ws.onopen = () => {
-        // Only set connection state after WebSocket is fully ready
-        setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            console.log('WebSocket connected and ready');
-            setIsConnected(true);
-            reconnectAttemptsRef.current = 0; // Reset reconnection attempts on successful connection
-            wsRef.current = ws; // Assign ref only after connection is confirmed ready
-          }
-        }, 100); // Small delay to ensure WebSocket is stable
-      };
-
-      ws.onclose = async (event) => {
-        const closeTime = new Date().toISOString();
-        console.log(`[${closeTime}] WebSocket disconnected with code ${event.code}`);
-        if (event.reason) console.log(`[${closeTime}] Close reason:`, event.reason);
-        setIsConnected(false);
-        
-        // Clear any existing reconnect timeout
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
-        
-        // Only attempt reconnection if we should and the connection was previously established
-        if (shouldReconnect && event.code !== 1006) {
-          const delay = getReconnectDelay();
-          console.log(`[${closeTime}] Attempting to reconnect in ${delay/1000} seconds...`);
-          reconnectTimeoutRef.current = setTimeout(connect, delay);
-        } else if (event.code === 1006) {
-          // For connection failures, add a small delay before retry
-          console.log(`[${closeTime}] Connection failed, retrying after stabilization...`);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          connect();
-        }
-      };
-
-      // Add ping/pong handling
-      let pingTimeout: NodeJS.Timeout | null = null;
-      const heartbeat = () => {
-        if (pingTimeout) clearTimeout(pingTimeout);
-        // Use `any` to handle custom property
-        (ws as any).isAlive = true;
-        pingTimeout = setTimeout(() => {
-          console.log('Ping timeout - closing connection');
-          ws.close();
-        }, 35000); // slightly longer than server's ping interval
-      };
-
-      ws.addEventListener('open', heartbeat);
-      ws.addEventListener('ping', heartbeat);
-      ws.addEventListener('pong', heartbeat);
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-
-      const handleMessage = async (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          // Always do heartbeat first
-          heartbeat();
-          
-          if (data.type === 'ping') {
-            // Respond to server ping if connection is open
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'pong' }));
-            }
-          } else if (data.type === 'connected') {
-            console.log('Received connection confirmation:', data);
-          } else if (data.type === 'newRequest') {
-            // Process the request first
-            await onMessage(data);
-            // Only send confirmation if still connected
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ 
-                type: 'requestReceived',
-                requestId: data.payload.compact.id,
-                timestamp: new Date().toISOString()
-              }));
-            }
-          }
-        } catch (error) {
-          console.error('Error handling WebSocket message:', error);
-        }
-      };
-
-      ws.onmessage = handleMessage;
-
-      // Add error event handler with reconnection logic
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        // Only attempt reconnect if the connection is actually closed
-        if (ws.readyState === WebSocket.CLOSED) {
-          const delay = getReconnectDelay();
-          console.log(`Error occurred. Reconnecting in ${delay/1000} seconds...`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            wsRef.current = null;
-            connect();
-          }, delay);
-        }
-      };
-
-      return () => {
-        if (pingTimeout) clearTimeout(pingTimeout);
-      };
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
-      // Schedule reconnection on connection error
-      if (shouldReconnect) {
-        const delay = getReconnectDelay();
-        console.log(`Error connecting. Retrying in ${delay/1000} seconds...`);
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connect();
-        }, delay);
-      }
-    }
-  }, [url, onMessage, shouldReconnect, getReconnectDelay]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const initConnection = async () => {
-      if (!mounted) return;
-      await connect();
-    };
-
-    initConnection();
-
-    return () => {
-      mounted = false;
-      setShouldReconnect(false);
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounting');
-        wsRef.current = null;
-      }
-    };
-  }, [connect]);
-
-  return isConnected;
-}
 
 function RequestCard({ request }: { request: StoredRequest & { clientKey: string } }) {
   return (
@@ -404,7 +231,43 @@ function App() {
     }
   }, [generateClientKey]);
 
-  const isWsConnected = useWebSocket('ws://localhost:3001/ws', handleWebSocketMessage);
+  const { sendMessage, lastMessage, readyState } = useWebSocket('ws://localhost:3001/ws', {
+    protocols: ['fillanthropist-protocol'],
+    reconnectAttempts: 10,
+    reconnectInterval: 3000,
+    shouldReconnect: (closeEvent) => true,
+    onMessage: async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'ping') {
+          sendMessage(JSON.stringify({ type: 'pong' }));
+        } else if (data.type === 'connected') {
+          console.log('Received connection confirmation:', data);
+        } else if (data.type === 'newRequest') {
+          // Process the request first
+          await handleWebSocketMessage(data);
+          // Send confirmation
+          sendMessage(JSON.stringify({ 
+            type: 'requestReceived',
+            requestId: data.payload.compact.id,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      } catch (error) {
+        console.error('Error handling WebSocket message:', error);
+      }
+    },
+    onOpen: () => console.log('WebSocket connected and ready'),
+    onClose: (event) => console.log(`WebSocket disconnected with code ${event.code}`, event.reason),
+    onError: (error) => console.error('WebSocket error:', error),
+    heartbeat: {
+      message: JSON.stringify({ type: 'ping' }),
+      returnMessage: JSON.stringify({ type: 'pong' }),
+      timeout: 30000,
+    }
+  });
+
+  const isWsConnected = readyState === ReadyState.OPEN;
 
   // Initial fetch of existing requests
   useEffect(() => {
