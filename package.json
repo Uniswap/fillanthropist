@@ -13,7 +13,7 @@
     "build:server": "tsc -p tsconfig.server.json",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test --import tsx src/**/*.test.ts"
   },
   "keywords": [],
   "author": "",

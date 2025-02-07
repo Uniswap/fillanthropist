@@ -1,6 +1,81 @@
 import { encodeAbiParameters, keccak256, toBytes } from 'viem'
 import type { CompactMessage } from '../types/broadcast'
 
+/**
+ * Calculates the settlement amount based on mandate parameters and priority fee
+ * @param priorityFee The priority fee on the transaction
+ * @param minimumAmount The minimum amount that must be settled
+ * @param baselinePriorityFee The baseline priority fee in wei
+ * @param scalingFactor The scaling factor to apply per priority fee wei above baseline
+ * @returns The derived settlement amount
+ */
+export function deriveSettlementAmount(
+  priorityFee: bigint,
+  minimumAmount: bigint,
+  baselinePriorityFee: bigint,
+  scalingFactor: bigint
+): bigint {
+  // Get the priority fee above baseline
+  const priorityFeeAboveBaseline = priorityFee < baselinePriorityFee ? 0n : priorityFee - baselinePriorityFee;
+
+  // If no fee above baseline or scaling factor is 1e18, return minimum amount
+  if (priorityFeeAboveBaseline === 0n || scalingFactor === BigInt(1e18)) {
+    return minimumAmount;
+  }
+
+  // For exact-in, increase settlement amount
+  if (scalingFactor > BigInt(1e18)) {
+    // Calculate scaling multiplier: 1e18 + ((scalingFactor - 1e18) * priorityFeeAboveBaseline)
+    const scalingMultiplier = BigInt(1e18) + ((scalingFactor - BigInt(1e18)) * priorityFeeAboveBaseline);
+    
+    // Multiply minimumAmount by scalingMultiplier using mulWadUp
+    // mulWadUp = (a * b + 1e18 - 1) / 1e18
+    const WAD = BigInt(1e18);
+    return (minimumAmount * scalingMultiplier + WAD - 1n) / WAD;
+  }
+
+  throw new Error("unimplemented");
+}
+
+/**
+ * Calculates the required priority fee to achieve a desired settlement amount
+ * @param desiredSettlement The desired settlement amount
+ * @param minimumAmount The minimum amount that must be settled
+ * @param baselinePriorityFee The baseline priority fee in wei
+ * @param scalingFactor The scaling factor to apply per priority fee wei above baseline
+ * @returns The required priority fee for the transaction
+ */
+export function derivePriorityFee(
+  desiredSettlement: bigint,
+  minimumAmount: bigint,
+  baselinePriorityFee: bigint,
+  scalingFactor: bigint
+): bigint {
+  // If desired settlement is minimum amount or scaling factor is 1e18, 
+  // return baseline priority fee
+  if (desiredSettlement === minimumAmount || scalingFactor === BigInt(1e18)) {
+    return baselinePriorityFee;
+  }
+
+  if (scalingFactor > BigInt(1e18)) {
+    // To find priorityFeeAboveBaseline, we solve:
+    // desiredSettlement = (minimumAmount * (1e18 + (scalingFactor - 1e18) * priorityFeeAboveBaseline)) / 1e18
+    
+    // Multiply both sides by 1e18
+    const leftSide = desiredSettlement * BigInt(1e18);
+    
+    // Subtract minimumAmount * 1e18 from both sides
+    const remainder = leftSide - (minimumAmount * BigInt(1e18));
+    
+    // Divide by minimumAmount * (scalingFactor - 1e18)
+    const priorityFeeAboveBaseline = remainder / (minimumAmount * (scalingFactor - BigInt(1e18)));
+    
+    return priorityFeeAboveBaseline + baselinePriorityFee;
+  }
+
+  throw new Error("unimplemented");
+}
+
 export function deriveClaimHash(
   chainId: number,
   compact: CompactMessage
