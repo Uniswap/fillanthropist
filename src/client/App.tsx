@@ -6,10 +6,16 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format large numbers with optional decimals
-const formatAmount = (amount: string, decimals = 6) => {
-  const num = BigInt(amount);
-  const eth = Number(num) / 1e18;
-  return eth.toFixed(decimals);
+const formatAmount = (amount: string | undefined, decimals = 6) => {
+  if (!amount) return '0';
+  try {
+    const num = BigInt(amount);
+    const eth = Number(num) / 1e18;
+    return eth.toFixed(decimals);
+  } catch (error) {
+    console.error('Error formatting amount:', error);
+    return '0';
+  }
 };
 
 // Helper function to format timestamps
@@ -110,30 +116,37 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
         console.error('WebSocket error:', error);
       };
 
-      ws.onmessage = (event) => {
+      const handleMessage = async (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           // Always do heartbeat first
           heartbeat();
           
           if (data.type === 'ping') {
-            // Respond to server ping
-            ws.send(JSON.stringify({ type: 'pong' }));
+            // Respond to server ping if connection is open
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'pong' }));
+            }
           } else if (data.type === 'connected') {
             console.log('Received connection confirmation:', data);
           } else if (data.type === 'newRequest') {
-            // Process the request and then confirm receipt
-            onMessage(data);
-            ws.send(JSON.stringify({ 
-              type: 'requestReceived',
-              requestId: data.payload.compact.id,
-              timestamp: new Date().toISOString()
-            }));
+            // Process the request first
+            await onMessage(data);
+            // Only send confirmation if still connected
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ 
+                type: 'requestReceived',
+                requestId: data.payload.compact.id,
+                timestamp: new Date().toISOString()
+              }));
+            }
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('Error handling WebSocket message:', error);
         }
       };
+
+      ws.onmessage = handleMessage;
 
       // Add error event handler with reconnection logic
       ws.onerror = (error) => {
@@ -166,15 +179,25 @@ function useWebSocket(url: string, onMessage: (data: any) => void) {
   }, [url, onMessage, shouldReconnect, getReconnectDelay]);
 
   useEffect(() => {
-    connect();
+    let mounted = true;
+
+    const initConnection = async () => {
+      if (!mounted) return;
+      await connect();
+    };
+
+    initConnection();
 
     return () => {
+      mounted = false;
       setShouldReconnect(false);
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
       if (wsRef.current) {
-        wsRef.current.close();
+        wsRef.current.close(1000, 'Component unmounting');
+        wsRef.current = null;
       }
     };
   }, [connect]);
@@ -199,9 +222,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
                 {formatAmount(request.compact.amount)} → {formatAmount(request.compact.mandate.minimumAmount)}
               </span>
-              <span className="px-2 py-1 text-xs bg-orange-500/10 text-orange-500 rounded">
-                {request.context.slippageBips} bips slippage
-              </span>
+              {request.context?.slippageBips !== undefined && (
+                <span className="px-2 py-1 text-xs bg-orange-500/10 text-orange-500 rounded">
+                  {request.context.slippageBips} bips slippage
+                </span>
+              )}
             </div>
             <div className="text-sm text-gray-400">
               {new Date(request.timestamp).toLocaleString(undefined, {
@@ -212,9 +237,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 minute: '2-digit',
                 second: '2-digit'
               })}
-              <span className="ml-4 text-[#00ff00]">
-                ${request.context.dispensationUSD} fee
-              </span>
+              {request.context?.dispensationUSD !== undefined && (
+                <span className="ml-4 text-[#00ff00]">
+                  ${request.context.dispensationUSD} fee
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -263,34 +290,34 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="flex gap-2">
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Spot: </span>
-                  <span className="text-gray-100">{formatAmount(request.context.spotOutputAmount, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.spotOutputAmount, 8)}</span>
                 </div>
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Direct: </span>
-                  <span className="text-gray-100">{formatAmount(request.context.quoteOutputAmountDirect, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountDirect, 8)}</span>
                 </div>
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Net: </span>
-                  <span className="text-gray-100">{formatAmount(request.context.quoteOutputAmountNet, 8)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountNet, 8)}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Dispensation: </span>
-                  <span className="text-gray-100">{formatAmount(request.context.dispensation)}</span>
+                  <span className="text-gray-100">{formatAmount(request.context?.dispensation)}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">USD: </span>
-                  <span className="text-gray-100">${request.context.dispensationUSD}</span>
+                  <span className="text-gray-100">${request.context?.dispensationUSD ?? '0'}</span>
                 </div>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Witness Type: </span>
-                <span className="text-gray-100 break-all">{request.context.witnessTypeString}</span>
+                <span className="text-gray-100 break-all">{request.context?.witnessTypeString ?? 'Unknown'}</span>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Witness Hash: </span>
-                <span className="text-gray-100 break-all">{request.context.witnessHash}</span>
+                <span className="text-gray-100 break-all">{request.context?.witnessHash ?? 'N/A'}</span>
               </div>
             </div>
           </section>
