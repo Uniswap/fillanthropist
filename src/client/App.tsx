@@ -231,7 +231,7 @@ function App() {
     }
   }, [generateClientKey]);
 
-  const { sendMessage, lastMessage, readyState } = useWebSocket('ws://localhost:3001/ws', {
+  const { sendMessage, lastMessage, readyState } = useWebSocket('/ws', {
     protocols: ['fillanthropist-protocol'],
     // Connection options
     reconnectAttempts: 20,
@@ -275,7 +275,7 @@ function App() {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/broadcasts');
+        const response = await fetch('/api/broadcasts');
         if (!response.ok) throw new Error('Failed to fetch requests');
         const data = await response.json();
         const requestsWithKeys = data.map((request: StoredRequest) => ({

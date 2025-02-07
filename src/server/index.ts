@@ -1,9 +1,12 @@
+import dotenv from 'dotenv';
+// Load environment variables before other imports
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
-import dotenv from 'dotenv';
 import type { BroadcastRequest } from '../types/broadcast';
 import { broadcastStore } from './store';
 import { WebSocketManager } from './websocket';
@@ -14,8 +17,8 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const server = createServer(app);
-const PORT = process.env.SERVER_PORT || 3001;
-const HOST = process.env.SERVER_HOST || 'localhost';
+const serverUrl = process.env.SERVER_URL || 'http://localhost:3001';
+const [, , host, port] = serverUrl.match(/^(https?:\/\/)?([^:]+):(\d+)$/) || [];
 
 // Initialize WebSocket manager
 const wsManager = new WebSocketManager(server);
@@ -26,8 +29,8 @@ app.use('/broadcast', cors());  // Allow all origins for /broadcast
 
 // Restrict other endpoints to specific origins
 const allowedOrigins = [
-  `http://${HOST}:${PORT}`,                    // Server URL
-  `ws://${HOST}:${PORT}`,                      // WebSocket URL
+  serverUrl,                                        // Server URL (HTTP)
+  serverUrl.replace('http', 'ws'),                 // Server URL (WebSocket)
   process.env.VITE_DEV_URL || 'http://localhost:5173'  // Frontend dev URL
 ];
 
@@ -178,8 +181,8 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, '../../dist/index.html'));
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+server.listen(parseInt(port), host, () => {
+  console.log(`Server running on ${serverUrl}`);
   console.log(`WebSocket server is ready`);
   console.log('Allowed origins:', allowedOrigins);
 });
