@@ -10,14 +10,21 @@ export default defineConfig({
     }
   },
   server: {
+    port: parseInt(process.env.VITE_DEV_PORT || '5173'),
+    host: process.env.VITE_DEV_HOST || 'localhost',
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_SERVER_URL || 'http://localhost:3001',
         changeOrigin: true
       },
       '/broadcast': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_SERVER_URL || 'http://localhost:3001',
         changeOrigin: true
+      },
+      '/ws': {
+        target: process.env.VITE_SERVER_URL || 'http://localhost:3001',
+        changeOrigin: true,
+        ws: true
       }
     }
   }

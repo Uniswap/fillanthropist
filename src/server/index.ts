@@ -3,6 +3,7 @@ import cors from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
+import dotenv from 'dotenv';
 import type { BroadcastRequest } from '../types/broadcast';
 import { broadcastStore } from './store';
 import { WebSocketManager } from './websocket';
@@ -13,14 +14,25 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const server = createServer(app);
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.SERVER_PORT || 3001;
+const HOST = process.env.SERVER_HOST || 'localhost';
 
 // Initialize WebSocket manager
 const wsManager = new WebSocketManager(server);
 
 // Middleware
+// Configure CORS - allow all origins for /broadcast, but restrict others
+app.use('/broadcast', cors());  // Allow all origins for /broadcast
+
+// Restrict other endpoints to specific origins
+const allowedOrigins = [
+  `http://${HOST}:${PORT}`,                    // Server URL
+  `ws://${HOST}:${PORT}`,                      // WebSocket URL
+  process.env.VITE_DEV_URL || 'http://localhost:5173'  // Frontend dev URL
+];
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3001', 'ws://localhost:3001'],
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -167,6 +179,7 @@ app.get('*', (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://${HOST}:${PORT}`);
   console.log(`WebSocket server is ready`);
+  console.log('Allowed origins:', allowedOrigins);
 });
