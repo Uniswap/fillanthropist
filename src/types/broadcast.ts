@@ -4,6 +4,7 @@ export interface BroadcastRequest {
   sponsorSignature: string;
   allocatorSignature: string;
   context: Context;
+  claimHash?: string;  // Added for storing the derived claim hash
 }
 
 export interface CompactMessage {

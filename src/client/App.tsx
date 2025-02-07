@@ -214,12 +214,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [requestCounter, setRequestCounter] = useState(0);
 
-  // Function to generate a unique client-side key
+  // Function to generate a unique client-side key using chainId, claimHash, and timestamp
   const generateClientKey = useCallback((request: StoredRequest) => {
-    const key = `${request.timestamp}-${request.compact.id}-${requestCounter}`;
-    setRequestCounter(prev => prev + 1);
-    return key;
-  }, [requestCounter]);
+    return `${request.chainId}-${request.claimHash}-${request.timestamp}`;
+  }, []);
 
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === 'newRequest') {

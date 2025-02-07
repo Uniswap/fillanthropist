@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import type { BroadcastRequest } from '../types/broadcast';
 import { broadcastStore } from './store';
 import { WebSocketManager } from './websocket';
+import { deriveClaimHash } from './utils';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,10 +96,11 @@ app.post('/broadcast', async (req, res) => {
       throw new Error('Invalid allocator signature format');
     }
     
-    // Add timestamp and store the request
+    // Calculate claim hash and add timestamp
     const storedRequest = {
       ...payload,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      claimHash: deriveClaimHash(Number(payload.chainId), payload.compact)
     };
     broadcastStore.addRequest(storedRequest);
     
