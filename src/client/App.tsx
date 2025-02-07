@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import type { BroadcastRequest } from '../types/broadcast';
+import { WagmiProvider } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { config, RainbowKitProvider, darkTheme, ConnectButton } from './config/wallet';
+
+// Create a client
+const queryClient = new QueryClient();
 
 interface StoredRequest extends BroadcastRequest {
   timestamp: number;
@@ -84,6 +90,10 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                  <span className="text-gray-400">Chain ID: </span>
+                  <span className="text-gray-100">{request.chainId}</span>
+                </div>
+                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Arbiter: </span>
                   <span className="text-gray-100 break-all">{request.compact.arbiter}</span>
                 </div>
@@ -159,6 +169,10 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                  <span className="text-gray-400">Chain ID: </span>
+                  <span className="text-gray-100">{request.compact.mandate.chainId}</span>
+                </div>
+                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Tribunal: </span>
                   <span className="text-gray-100 break-all">{request.compact.mandate.tribunal}</span>
                 </div>
@@ -169,6 +183,10 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Token: </span>
                   <span className="text-gray-100 break-all">{request.compact.mandate.token}</span>
+                </div>
+                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                  <span className="text-gray-400">Minimum Amount: </span>
+                  <span className="text-gray-100">{formatAmount(request.compact.mandate.minimumAmount)}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
@@ -210,7 +228,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   );
 }
 
-function App() {
+function AppContent() {
   const [requests, setRequests] = useState<(StoredRequest & { clientKey: string })[]>([]);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -302,6 +320,7 @@ function App() {
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-100">Fillanthropist</h1>
             <div className="flex items-center gap-4">
+              <ConnectButton />
               {isLoading && (
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#00ff00] border-t-transparent" />
               )}
@@ -341,6 +360,18 @@ function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider theme={darkTheme()}>
+          <AppContent />
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 
