@@ -96,11 +96,23 @@ app.post('/broadcast', async (req, res) => {
       throw new Error('Invalid allocator signature format');
     }
     
-    // Calculate claim hash and add timestamp
+    // Validate chainId
+    if (!payload.chainId) throw new Error('Chain ID is required');
+
+    // Calculate claim hash
+    let claimHash: string;
+    try {
+      claimHash = deriveClaimHash(Number(payload.chainId), payload.compact);
+    } catch (error) {
+      // Re-throw validation errors with more context
+      throw new Error(`Failed to derive claim hash: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    // Create the stored request with timestamp and claim hash
     const storedRequest = {
       ...payload,
       timestamp: Date.now(),
-      claimHash: deriveClaimHash(Number(payload.chainId), payload.compact)
+      claimHash
     };
     broadcastStore.addRequest(storedRequest);
     

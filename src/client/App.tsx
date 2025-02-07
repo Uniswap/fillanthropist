@@ -39,12 +39,14 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
       <div className="border-b border-gray-800 pb-4 mb-6">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-gray-100 font-mono">
-              {request.compact.id}
+            <h3 className="text-lg font-semibold text-gray-100 font-mono flex items-center gap-2">
+              <span>Chain {request.chainId}</span>
+              <span className="text-gray-400">·</span>
+              <span className="text-sm">{request.claimHash}</span>
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
-                Chain {request.chainId} → {request.compact.mandate.chainId}
+                ID {request.compact.id}
               </span>
               <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
                 {formatAmount(request.compact.amount)} → {formatAmount(request.compact.mandate.minimumAmount)}
