@@ -67,7 +67,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               })}
               {request.context?.dispensationUSD !== undefined && (
                 <span className="ml-4 text-[#00ff00]">
-                  ${request.context.dispensationUSD} fee
+                  ${request.context.dispensationUSD.replace(/^\$/, '')} fee
                 </span>
               )}
             </div>
@@ -85,15 +85,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Arbiter: </span>
-                  <span className="text-gray-100">{request.compact.arbiter}</span>
+                  <span className="text-gray-100 break-all">{request.compact.arbiter}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Sponsor: </span>
-                  <span className="text-gray-100">{request.compact.sponsor}</span>
+                  <span className="text-gray-100 break-all">{request.compact.sponsor}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">ID: </span>
-                  <span className="text-gray-100">{request.compact.id}</span>
+                  <span className="text-gray-100 break-all">{request.compact.id}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Amount: </span>
@@ -101,7 +101,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Nonce: </span>
-                  <span className="text-gray-100">{request.compact.nonce}</span>
+                  <span className="text-gray-100 break-all">{request.compact.nonce}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
@@ -129,15 +129,16 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountNet)}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-2">
-                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                  <span className="text-gray-400">Dispensation: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.dispensation)}</span>
-                </div>
-                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                  <span className="text-gray-400">USD: </span>
-                  <span className="text-gray-100">{request.context?.dispensationUSD?.replace('$', '') ?? '0'}</span>
-                </div>
+              <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                <span className="text-gray-400">Dispensation: </span>
+                <span className="text-gray-100">
+                  {formatAmount(request.context?.dispensation)}
+                  {request.context?.dispensationUSD && (
+                    <span className="ml-1">
+                      (${request.context.dispensationUSD.replace(/^\$/, '')})
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Witness Type: </span>
@@ -159,15 +160,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Tribunal: </span>
-                  <span className="text-gray-100">{request.compact.mandate.tribunal}</span>
+                  <span className="text-gray-100 break-all">{request.compact.mandate.tribunal}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Recipient: </span>
-                  <span className="text-gray-100">{request.compact.mandate.recipient}</span>
+                  <span className="text-gray-100 break-all">{request.compact.mandate.recipient}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Token: </span>
-                  <span className="text-gray-100">{request.compact.mandate.token}</span>
+                  <span className="text-gray-100 break-all">{request.compact.mandate.token}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
