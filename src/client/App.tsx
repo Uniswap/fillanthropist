@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { deriveSettlementAmount } from './utils';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import type { BroadcastRequest } from '../types/broadcast';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, useAccount } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config, RainbowKitProvider, darkTheme, ConnectButton } from './config/wallet';
 
@@ -37,11 +38,85 @@ const formatTimestamp = (timestamp: string) => {
   });
 };
 
+interface BalanceInfo {
+  balance: string;
+  allowance?: string;
+  error?: string;
+}
+
 function RequestCard({ request }: { request: StoredRequest & { clientKey: string } }) {
+  const [priorityFee, setPriorityFee] = useState(0);
+  const [balanceInfo, setBalanceInfo] = useState<BalanceInfo | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const { address } = useAccount();
+
+  // Fetch balance and allowance when account is connected
+  useEffect(() => {
+    const fetchBalanceInfo = async () => {
+      if (!address) {
+        setBalanceInfo(null);
+        return;
+      }
+
+      setIsLoadingBalance(true);
+      try {
+        const response = await fetch('/api/check-balance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chainId: Number(request.compact.mandate.chainId),
+            tribunalAddress: request.compact.mandate.tribunal,
+            tokenAddress: request.compact.mandate.token,
+            accountAddress: address,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch balance');
+        }
+
+        const data = await response.json();
+        setBalanceInfo(data);
+      } catch (error) {
+        setBalanceInfo({
+          balance: '0',
+          error: error instanceof Error ? error.message : 'Failed to fetch balance'
+        });
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+
+    fetchBalanceInfo();
+  }, [address, request.compact.mandate]);
+  
+  // Calculate settlement amount based on priority fee
+  const calculatedSettlement = useMemo(() => {
+    try {
+      // Convert gwei to wei (1 gwei = 10^9 wei), always rounding down
+      const priorityFeeWei = BigInt(Math.floor(priorityFee * 1e9));
+      const minimumAmount = BigInt(request.compact.mandate.minimumAmount);
+      const baselinePriorityFee = BigInt(request.compact.mandate.baselinePriorityFee);
+      const scalingFactor = BigInt(request.compact.mandate.scalingFactor);
+      
+      return deriveSettlementAmount(
+        priorityFeeWei,
+        minimumAmount,
+        baselinePriorityFee,
+        scalingFactor
+      ).toString();
+    } catch (error) {
+      console.error('Error calculating settlement:', error);
+      return request.compact.mandate.minimumAmount;
+    }
+  }, [priorityFee, request.compact.mandate]);
+
   return (
     <div className="p-6 bg-[#0a0a0a] rounded-lg shadow-xl border border-gray-800">
       {/* Header */}
-      <div className="border-b border-gray-800 pb-4 mb-6">
+      <div className="border-b border-gray-800 pb-4">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold text-gray-100 font-mono flex items-center gap-2">
@@ -77,6 +152,60 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </span>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Balance Info */}
+      {address && (
+        <div className="px-6 py-4 border-b border-gray-800">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              {isLoadingBalance ? (
+                <div className="text-sm text-gray-400">Loading balance...</div>
+              ) : balanceInfo ? (
+                <div>
+                  <div className="text-sm">
+                    <span className="text-gray-400">Balance: </span>
+                    <span className="text-[#00ff00] font-mono">{balanceInfo.balance}</span>
+                  </div>
+                  {balanceInfo.allowance !== undefined && (
+                    <div className="text-sm">
+                      <span className="text-gray-400">Allowance: </span>
+                      <span className="text-[#00ff00] font-mono">{balanceInfo.allowance}</span>
+                    </div>
+                  )}
+                  {balanceInfo.error && (
+                    <div className="text-sm text-red-400">{balanceInfo.error}</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400">Connect wallet to view balance</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Priority Fee Slider */}
+      <div className="px-6 py-4 border-b border-gray-800">
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium text-gray-300">Priority Fee</label>
+            <span className="text-sm text-gray-400">{priorityFee} gwei</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            step="0.1"
+            value={priorityFee}
+            onChange={(e) => setPriorityFee(parseFloat(e.target.value))}
+            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#00ff00]"
+          />
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-sm text-gray-400">Settlement Amount:</span>
+            <span className="text-sm font-mono text-[#00ff00]">{formatAmount(calculatedSettlement)}</span>
           </div>
         </div>
       </div>
@@ -288,30 +417,6 @@ function AppContent() {
   });
 
   const isWsConnected = readyState === ReadyState.OPEN;
-
-  // Initial fetch of existing requests
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const response = await fetch('/api/broadcasts');
-        if (!response.ok) throw new Error('Failed to fetch requests');
-        const data = await response.json();
-        const requestsWithKeys = data.map((request: StoredRequest) => ({
-          ...request,
-          clientKey: generateClientKey(request)
-        }));
-        setRequests(requestsWithKeys);
-        setError('');
-      } catch (err) {
-        setError('Failed to fetch broadcast requests');
-        console.error('Error fetching requests:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRequests();
-  }, [generateClientKey]);
 
   return (
     <div className="min-h-screen bg-[#050505]">

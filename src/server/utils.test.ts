@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { deriveSettlementAmount, derivePriorityFee } from './utils'
+import { deriveSettlementAmount, derivePriorityFee } from '../client/utils'
 
 describe('Settlement Amount Calculations', () => {
   // Test case from test_DeriveAmounts_NoPriorityFee

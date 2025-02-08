@@ -29,6 +29,19 @@ export interface Mandate {
   salt: string;                // Unique salt value (hex string)
 }
 
+export interface BalanceCheckRequest {
+  chainId: number;
+  tribunalAddress: string;
+  tokenAddress: string;
+  accountAddress: string;
+}
+
+export interface BalanceCheckResponse {
+  balance: string;
+  allowance?: string; // Only present if tokenAddress is not zero address
+  error?: string;
+}
+
 export interface Context {
   // Quote-related information
   dispensation: string;           // Dispensation amount

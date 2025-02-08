@@ -7,10 +7,11 @@ import cors from 'cors';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
-import type { BroadcastRequest } from '../types/broadcast';
+import type { BroadcastRequest, BalanceCheckRequest } from '../types/broadcast';
 import { broadcastStore } from './store';
 import { WebSocketManager } from './websocket';
-import { deriveClaimHash } from './utils';
+import { checkBalanceAndAllowance } from './utils';
+import { deriveClaimHash } from '../client/utils';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,14 +25,25 @@ const [, , host, port] = serverUrl.match(/^(https?:\/\/)?([^:]+):(\d+)$/) || [];
 const wsManager = new WebSocketManager(server);
 
 // Middleware
-// Configure CORS - allow all origins for /broadcast, but restrict others
-app.use('/broadcast', cors());  // Allow all origins for /broadcast
+// Configure CORS
+const frontendUrl = process.env.VITE_DEV_URL || 'http://localhost:5173';
 
-// Restrict other endpoints to specific origins
+// Allow all origins for /broadcast endpoint only
+app.use('/broadcast', cors());
+
+// Restrict /api endpoints to frontend origin only
+app.use('/api', cors({
+  origin: frontendUrl,
+  methods: ['POST', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type']
+}));
+
+// Configure CORS for WebSocket
 const allowedOrigins = [
-  serverUrl,                                        // Server URL (HTTP)
-  serverUrl.replace('http', 'ws'),                 // Server URL (WebSocket)
-  process.env.VITE_DEV_URL || 'http://localhost:5173'  // Frontend dev URL
+  serverUrl,                       // Server URL (HTTP)
+  serverUrl.replace('http', 'ws'), // Server URL (WebSocket)
+  frontendUrl                      // Frontend URL
 ];
 
 app.use(cors({
@@ -47,6 +59,33 @@ app.use(express.json());
 
 // Serve static files from the dist directory
 app.use(express.static(join(__dirname, '../../dist')));
+
+// Balance check endpoint
+app.post('/api/check-balance', async (req, res) => {
+  const requestTime = new Date().toISOString();
+  console.log(`[${requestTime}] Received POST request to /api/check-balance`);
+
+  try {
+    const request = req.body as BalanceCheckRequest;
+    
+    // Validate request parameters
+    if (!request.chainId) throw new Error('Chain ID is required');
+    if (!isValidAddress(request.tribunalAddress)) throw new Error('Invalid tribunal address');
+    if (!isValidAddress(request.tokenAddress)) throw new Error('Invalid token address');
+    if (!isValidAddress(request.accountAddress)) throw new Error('Invalid account address');
+
+    const result = await checkBalanceAndAllowance(request);
+    
+    console.log(`[${requestTime}] Balance check completed for account ${request.accountAddress}`);
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking balance:', error);
+    res.status(400).json({
+      balance: '0',
+      error: error instanceof Error ? error.message : 'Invalid balance check request'
+    });
+  }
+});
 
 // Get all broadcast requests
 app.get('/api/broadcasts', (req, res) => {
