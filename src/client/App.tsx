@@ -179,6 +179,19 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                       {formatUnits(BigInt(balanceInfo.balance), balanceInfo.decimals || 18)}
                     </span>
                   </div>
+                  {balanceInfo.symbol === 'ETH' && request.context?.dispensation && (
+                    <div className="text-sm">
+                      <span className="text-gray-400">Balance after dispensation: </span>
+                      <span className="text-[#00ff00] font-mono">
+                        {formatUnits(
+                          BigInt(balanceInfo.balance) > BigInt(request.context.dispensation)
+                            ? BigInt(balanceInfo.balance) - BigInt(request.context.dispensation)
+                            : BigInt(0),
+                          balanceInfo.decimals || 18
+                        )}
+                      </span>
+                    </div>
+                  )}
                   {balanceInfo.allowance !== undefined && balanceInfo.symbol !== 'ETH' && (
                     <div className="text-sm">
                       <span className="text-gray-400">{balanceInfo.symbol} allowance: </span>
