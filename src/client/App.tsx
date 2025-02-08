@@ -135,7 +135,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   const handleApproval = async (useMax: boolean) => {
     try {
       // First switch to the correct chain
+      console.log('Switching to chain:', request.compact.mandate.chainId);
       await switchChainAsync({ chainId: Number(request.compact.mandate.chainId) });
+      console.log('Successfully switched chain');
 
       // Then approve
       if (useMax) {

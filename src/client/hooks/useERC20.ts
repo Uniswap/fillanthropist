@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
-import { type Hash } from 'viem';
+import { type Hash, type TransactionReceipt } from 'viem';
 import { useNotification } from '../context/useNotification';
 
 const MAX_UINT256 = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
@@ -47,12 +47,14 @@ export function useERC20(tokenAddress?: `0x${string}`) {
 
       const finalAmount = typeof amount === 'string' ? BigInt(amount) : amount;
       
+      console.log('Initiating approval transaction...');
       const hash = await writeContractAsync({
         address: tokenAddress,
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [spender, finalAmount],
       });
+      console.log('Transaction submitted with hash:', hash);
 
       showNotification({
         type: 'success',
@@ -63,31 +65,65 @@ export function useERC20(tokenAddress?: `0x${string}`) {
         autoHide: true,
       });
 
-      // Watch for confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      // Watch for confirmation with timeout
+      console.log('Waiting for transaction confirmation...');
+      try {
+        const receipt = await Promise.race([
+          publicClient.waitForTransactionReceipt({ hash }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Transaction confirmation timeout')), 60000)
+          )
+        ]) as TransactionReceipt;
+        
+        console.log('Transaction receipt received:', receipt);
 
-      if (receipt.status === 'success') {
-        showNotification({
-          type: 'success',
-          title: 'Approval Transaction Confirmed',
-          message: 'The approval was successful',
-          stage: 'confirmed',
-          txHash: hash,
-          autoHide: false,
-        });
-      }
+        if (receipt.status === "success") {
+          console.log('Transaction confirmed successfully');
+          showNotification({
+            type: 'success',
+            title: 'Approval Transaction Confirmed',
+            message: 'The approval was successful',
+            stage: 'confirmed',
+            txHash: hash,
+            autoHide: false,
+          });
+        } else {
+          console.log('Transaction reverted');
+          showNotification({
+            type: 'error',
+            title: 'Transaction Failed',
+            message: 'The transaction was reverted',
+            txHash: hash,
+            autoHide: true,
+          });
+          throw new Error('Transaction reverted');
+        }
 
-      return hash;
-    } catch (error) {
-      if (error instanceof Error) {
+        return hash;
+      } catch (error) {
+        console.error('Transaction confirmation error:', error);
+        const isTimeout = error instanceof Error && error.message.includes('timeout');
         showNotification({
           type: 'error',
           title: 'Transaction Failed',
-          message: error.message,
-          txHash: tempTxId,
+          message: isTimeout ? 'Transaction confirmation timed out' : 'Failed to confirm transaction',
+          txHash: hash,
           autoHide: true,
         });
+        throw error;
       }
+    } catch (error) {
+      console.error('Transaction error:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message
+        : 'Unknown error occurred';
+      showNotification({
+        type: 'error',
+        title: 'Transaction Failed',
+        message: errorMessage,
+        txHash: tempTxId,
+        autoHide: true,
+      });
       throw error;
     } finally {
       setIsLoading(false);
