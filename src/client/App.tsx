@@ -233,13 +233,26 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             <span className={`text-sm font-mono ${(() => {
               if (!balanceInfo) return 'text-[#00ff00]';
               const settlement = BigInt(calculatedSettlement);
+              
+              // Handle ETH case
               if (balanceInfo.symbol === 'ETH' && request.context?.dispensation) {
                 const balanceAfterDispensation = BigInt(balanceInfo.balance) > BigInt(request.context.dispensation)
                   ? BigInt(balanceInfo.balance) - BigInt(request.context.dispensation)
                   : BigInt(0);
                 return balanceAfterDispensation >= settlement ? 'text-[#00ff00]' : 'text-red-500';
               }
-              return BigInt(balanceInfo.balance) >= settlement ? 'text-[#00ff00]' : 'text-red-500';
+              
+              // Handle ERC20 case
+              const hasBalance = BigInt(balanceInfo.balance) >= settlement;
+              if (!hasBalance) return 'text-red-500';
+              
+              // If we have balance but it's an ERC20, check allowance
+              if (balanceInfo.allowance !== undefined) {
+                const hasAllowance = BigInt(balanceInfo.allowance) >= settlement;
+                return hasAllowance ? 'text-[#00ff00]' : 'text-yellow-500';
+              }
+              
+              return 'text-[#00ff00]';
             })()}`}>
               {formatUnits(BigInt(calculatedSettlement), balanceInfo?.decimals || 18)}
             </span>
