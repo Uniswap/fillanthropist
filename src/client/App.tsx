@@ -230,7 +230,19 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
           />
           <div className="flex justify-between items-center mt-2">
             <span className="text-sm text-gray-400">Settlement Amount:</span>
-            <span className="text-sm font-mono text-[#00ff00]">{formatAmount(calculatedSettlement)}</span>
+            <span className={`text-sm font-mono ${(() => {
+              if (!balanceInfo) return 'text-[#00ff00]';
+              const settlement = BigInt(calculatedSettlement);
+              if (balanceInfo.symbol === 'ETH' && request.context?.dispensation) {
+                const balanceAfterDispensation = BigInt(balanceInfo.balance) > BigInt(request.context.dispensation)
+                  ? BigInt(balanceInfo.balance) - BigInt(request.context.dispensation)
+                  : BigInt(0);
+                return balanceAfterDispensation >= settlement ? 'text-[#00ff00]' : 'text-red-500';
+              }
+              return BigInt(balanceInfo.balance) >= settlement ? 'text-[#00ff00]' : 'text-red-500';
+            })()}`}>
+              {formatUnits(BigInt(calculatedSettlement), balanceInfo?.decimals || 18)}
+            </span>
           </div>
         </div>
       </div>
