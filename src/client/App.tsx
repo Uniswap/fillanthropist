@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { deriveSettlementAmount } from './utils';
+import { formatUnits } from 'viem';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import type { BroadcastRequest } from '../types/broadcast';
 import { WagmiProvider, useAccount } from 'wagmi';
@@ -42,6 +43,9 @@ interface BalanceInfo {
   balance: string;
   allowance?: string;
   error?: string;
+  name?: string;
+  symbol?: string;
+  decimals?: number;
 }
 
 function RequestCard({ request }: { request: StoredRequest & { clientKey: string } }) {
@@ -166,13 +170,21 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               ) : balanceInfo ? (
                 <div>
                   <div className="text-sm">
-                    <span className="text-gray-400">Balance: </span>
-                    <span className="text-[#00ff00] font-mono">{balanceInfo.balance}</span>
+                    <span className="text-gray-400">Fill token: </span>
+                    <span className="text-[#00ff00] font-mono">{balanceInfo.name}</span>
                   </div>
-                  {balanceInfo.allowance !== undefined && (
+                  <div className="text-sm">
+                    <span className="text-gray-400">{balanceInfo.symbol} balance: </span>
+                    <span className="text-[#00ff00] font-mono">
+                      {formatUnits(BigInt(balanceInfo.balance), balanceInfo.decimals || 18)}
+                    </span>
+                  </div>
+                  {balanceInfo.allowance !== undefined && balanceInfo.symbol !== 'ETH' && (
                     <div className="text-sm">
-                      <span className="text-gray-400">Allowance: </span>
-                      <span className="text-[#00ff00] font-mono">{balanceInfo.allowance}</span>
+                      <span className="text-gray-400">{balanceInfo.symbol} allowance: </span>
+                      <span className="text-[#00ff00] font-mono">
+                        {formatUnits(BigInt(balanceInfo.allowance || '0'), balanceInfo.decimals || 18)}
+                      </span>
                     </div>
                   )}
                   {balanceInfo.error && (

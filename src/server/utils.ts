@@ -1,4 +1,4 @@
-import { createPublicClient, http, formatEther, erc20Abi } from 'viem'
+import { createPublicClient, http, erc20Abi } from 'viem'
 import type { BalanceCheckRequest, BalanceCheckResponse } from '../types/broadcast'
 
 // RPC URLs for supported chains
@@ -25,18 +25,21 @@ export async function checkBalanceAndAllowance(
 
     const zeroAddress = '0x0000000000000000000000000000000000000000' as const
 
-    // If token is zero address, check ETH balance
+    // If token is zero address, return ETH info
     if (request.tokenAddress === zeroAddress) {
       const balance = await publicClient.getBalance({
         address: request.accountAddress as `0x${string}`
       })
       return {
-        balance: formatEther(balance)
+        balance: balance.toString(),
+        name: 'Ether',
+        symbol: 'ETH',
+        decimals: 18
       }
     }
 
-    // Otherwise check ERC20 balance and allowance
-    const [balance, allowance] = await Promise.all([
+    // Otherwise check ERC20 balance, allowance, and token info
+    const [balance, allowance, name, symbol, decimals] = await Promise.all([
       publicClient.readContract({
         address: request.tokenAddress as `0x${string}`,
         abi: erc20Abi,
@@ -48,12 +51,30 @@ export async function checkBalanceAndAllowance(
         abi: erc20Abi,
         functionName: 'allowance',
         args: [request.accountAddress as `0x${string}`, request.tribunalAddress as `0x${string}`]
+      }),
+      publicClient.readContract({
+        address: request.tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'name'
+      }),
+      publicClient.readContract({
+        address: request.tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'symbol'
+      }),
+      publicClient.readContract({
+        address: request.tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'decimals'
       })
     ])
 
     return {
-      balance: formatEther(balance),
-      allowance: formatEther(allowance)
+      balance: balance.toString(),
+      allowance: allowance.toString(),
+      name: name as string,
+      symbol: symbol as string,
+      decimals: decimals as number
     }
   } catch (error) {
     return {

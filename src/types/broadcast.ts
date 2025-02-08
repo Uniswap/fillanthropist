@@ -38,8 +38,11 @@ export interface BalanceCheckRequest {
 
 export interface BalanceCheckResponse {
   balance: string;
-  allowance?: string; // Only present if tokenAddress is not zero address
+  allowance?: string;
   error?: string;
+  name?: string;
+  symbol?: string;
+  decimals?: number;
 }
 
 export interface Context {
