@@ -20,6 +20,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@headlessui/react": "^2.2.0",
+    "@heroicons/react": "^2.2.0",
     "@rainbow-me/rainbowkit": "^2.2.3",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

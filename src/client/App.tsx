@@ -3,9 +3,11 @@ import { deriveSettlementAmount } from './utils';
 import { formatUnits } from 'viem';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import type { BroadcastRequest } from '../types/broadcast';
-import { WagmiProvider, useAccount } from 'wagmi';
+import { WagmiProvider, useAccount, useSwitchChain } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config, RainbowKitProvider, darkTheme, ConnectButton } from './config/wallet';
+import { NotificationProvider } from './context/NotificationProvider';
+import { useERC20 } from './hooks/useERC20';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -53,6 +55,8 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { address } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
+  const { approve, approveMax, isLoading: isApproving } = useERC20(request.compact.mandate.token as `0x${string}`);
 
   // Fetch balance and allowance when account is connected
   useEffect(() => {
@@ -116,6 +120,57 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
       return request.compact.mandate.minimumAmount;
     }
   }, [priorityFee, request.compact.mandate]);
+
+  // Check if we need to show approval buttons
+  const needsApproval = useMemo(() => {
+    if (!balanceInfo || balanceInfo.symbol === 'ETH') return false;
+    const settlement = BigInt(calculatedSettlement);
+    const hasBalance = BigInt(balanceInfo.balance) >= settlement;
+    if (!hasBalance) return false;
+    if (balanceInfo.allowance === undefined) return false;
+    return BigInt(balanceInfo.allowance) < settlement;
+  }, [balanceInfo, calculatedSettlement]);
+
+  // Handle approval
+  const handleApproval = async (useMax: boolean) => {
+    try {
+      // First switch to the correct chain
+      await switchChainAsync({ chainId: Number(request.compact.mandate.chainId) });
+
+      // Then approve
+      if (useMax) {
+        await approveMax(request.compact.mandate.tribunal as `0x${string}`);
+      } else {
+        await approve(
+          request.compact.mandate.tribunal as `0x${string}`,
+          calculatedSettlement
+        );
+      }
+
+      // Refresh balance info
+      const response = await fetch('/api/check-balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chainId: Number(request.compact.mandate.chainId),
+          tribunalAddress: request.compact.mandate.tribunal,
+          tokenAddress: request.compact.mandate.token,
+          accountAddress: address,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch updated balance');
+      }
+
+      const data = await response.json();
+      setBalanceInfo(data);
+    } catch (error) {
+      console.error('Error during approval:', error);
+    }
+  };
 
   return (
     <div className="p-6 bg-[#0a0a0a] rounded-lg shadow-xl border border-gray-800">
@@ -257,6 +312,26 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               {formatUnits(BigInt(calculatedSettlement), balanceInfo?.decimals || 18)}
             </span>
           </div>
+          
+          {/* Approval Buttons */}
+          {needsApproval && (
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => handleApproval(false)}
+                disabled={isApproving}
+                className="flex-1 px-4 py-2 bg-[#00ff00]/10 hover:bg-[#00ff00]/20 text-[#00ff00] rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isApproving ? 'Approving...' : 'Approve Exact'}
+              </button>
+              <button
+                onClick={() => handleApproval(true)}
+                disabled={isApproving}
+                className="flex-1 px-4 py-2 bg-[#00ff00]/10 hover:bg-[#00ff00]/20 text-[#00ff00] rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isApproving ? 'Approving...' : 'Approve Max'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -523,7 +598,9 @@ function App() {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider theme={darkTheme()}>
-          <AppContent />
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
