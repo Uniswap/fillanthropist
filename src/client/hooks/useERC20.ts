@@ -36,12 +36,14 @@ export function useERC20(tokenAddress?: `0x${string}`) {
     const tempTxId = `pending-${Date.now()}`;
 
     try {
+      const { chain } = publicClient;
       showNotification({
         type: 'info',
         title: 'Approval Transaction Initiated',
         message: 'Waiting for signature...',
         stage: 'initiated',
         txHash: tempTxId,
+        chainId: chain.id,
         autoHide: false,
       });
 
@@ -62,6 +64,7 @@ export function useERC20(tokenAddress?: `0x${string}`) {
         message: 'Waiting for confirmation...',
         stage: 'submitted',
         txHash: hash,
+        chainId: chain.id,
         autoHide: true,
       });
 
@@ -85,6 +88,7 @@ export function useERC20(tokenAddress?: `0x${string}`) {
             message: 'The approval was successful',
             stage: 'confirmed',
             txHash: hash,
+            chainId: chain.id,
             autoHide: false,
           });
         } else {
@@ -94,6 +98,7 @@ export function useERC20(tokenAddress?: `0x${string}`) {
             title: 'Transaction Failed',
             message: 'The transaction was reverted',
             txHash: hash,
+            chainId: chain.id,
             autoHide: true,
           });
           throw new Error('Transaction reverted');
@@ -108,6 +113,7 @@ export function useERC20(tokenAddress?: `0x${string}`) {
           title: 'Transaction Failed',
           message: isTimeout ? 'Transaction confirmation timed out' : 'Failed to confirm transaction',
           txHash: hash,
+          chainId: chain.id,
           autoHide: true,
         });
         throw error;

@@ -1,4 +1,5 @@
 import { Fragment, ReactNode, useState, useEffect, useCallback } from 'react';
+import { getBlockExplorerTxUrl } from '../utils/chains';
 import { Transition } from '@headlessui/react';
 import {
   CheckCircleIcon,
@@ -124,9 +125,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
 
     const shortHash = `${notification.txHash.slice(0, 6)}...${notification.txHash.slice(-4)}`;
+    const blockExplorerUrl = notification.chainId 
+      ? getBlockExplorerTxUrl(notification.chainId, notification.txHash)
+      : null;
+
     return (
       <p className="mt-1 text-sm text-gray-500">
-        Transaction: <span className="text-[#00ff00]">{shortHash}</span>
+        Transaction:{' '}
+        {blockExplorerUrl ? (
+          <a
+            href={blockExplorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#00ff00] hover:text-[#33ff33] transition-colors duration-200"
+          >
+            {shortHash}
+          </a>
+        ) : (
+          <span className="text-[#00ff00]">{shortHash}</span>
+        )}
       </p>
     );
   };
