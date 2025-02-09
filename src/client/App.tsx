@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config, RainbowKitProvider, darkTheme, ConnectButton } from './config/wallet';
 import { NotificationProvider } from './context/NotificationProvider';
 import { useERC20 } from './hooks/useERC20';
+import { useFill } from './hooks/useFill';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   const { address } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const { approve, approveMax, isLoading: isApproving } = useERC20(request.compact.mandate.token as `0x${string}`);
+  const { fill } = useFill();
 
   // Fetch balance and allowance when account is connected
   useEffect(() => {
@@ -315,6 +317,96 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             </span>
           </div>
           
+          {/* Fill Button */}
+          {(() => {
+            if (!balanceInfo) return null;
+            const settlement = BigInt(calculatedSettlement);
+            
+            // Handle ETH case
+            if (balanceInfo.symbol === 'ETH' && request.context?.dispensation) {
+              const balanceAfterDispensation = BigInt(balanceInfo.balance) > BigInt(request.context.dispensation)
+                ? BigInt(balanceInfo.balance) - BigInt(request.context.dispensation)
+                : BigInt(0);
+              if (balanceAfterDispensation >= settlement) {
+                return (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await switchChainAsync({ chainId: Number(request.compact.mandate.chainId) });
+                        await fill(
+                          request.compact.mandate.tribunal as `0x${string}`,
+                          {
+                            chainId: request.chainId,
+                            compact: request.compact,
+                            sponsorSignature: request.sponsorSignature,
+                            allocatorSignature: request.allocatorSignature
+                          },
+                          request.compact.mandate,
+                          {
+                            claimant: address,
+                            dispensation: request.context.dispensation
+                          },
+                          priorityFee,
+                          request.context.dispensation,
+                          calculatedSettlement
+                        );
+                      } catch (error) {
+                        console.error('Fill error:', error);
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-[#00ff00]/10 hover:bg-[#00ff00]/20 text-[#00ff00] rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Execute Fill
+                  </button>
+                );
+              }
+            }
+            
+            // Handle ERC20 case
+            const hasBalance = BigInt(balanceInfo.balance) >= settlement;
+            if (!hasBalance) return null;
+            
+            // If we have balance and it's an ERC20, check allowance
+            if (balanceInfo.allowance !== undefined) {
+              const hasAllowance = BigInt(balanceInfo.allowance) >= settlement;
+              if (hasAllowance) {
+                return (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await switchChainAsync({ chainId: Number(request.compact.mandate.chainId) });
+                        await fill(
+                          request.compact.mandate.tribunal as `0x${string}`,
+                          {
+                            chainId: request.chainId,
+                            compact: request.compact,
+                            sponsorSignature: request.sponsorSignature,
+                            allocatorSignature: request.allocatorSignature
+                          },
+                          request.compact.mandate,
+                          {
+                            claimant: address,
+                            dispensation: request.context.dispensation
+                          },
+                          priorityFee,
+                          request.context.dispensation,
+                          calculatedSettlement
+                        );
+                      } catch (error) {
+                        console.error('Fill error:', error);
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-[#00ff00]/10 hover:bg-[#00ff00]/20 text-[#00ff00] rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Execute Fill
+                  </button>
+                );
+              }
+            }
+            
+            return null;
+          })()}
+
           {/* Approval Buttons */}
           {needsApproval && (
             <div className="flex gap-2 mt-4">
