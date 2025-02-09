@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { usePublicClient, useWalletClient, useSwitchChain } from 'wagmi';
 import { useNotification } from '../context/useNotification';
 import { parseEther, encodeFunctionData } from 'viem';
 
 export function useFill() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
+  const { switchChainAsync } = useSwitchChain();
   const { showNotification } = useNotification();
 
   const fill = useCallback(async (
@@ -20,6 +21,9 @@ export function useFill() {
     if (!walletClient || !publicClient) throw new Error('Wallet not connected');
 
     try {
+      // First switch to the correct chain
+      await switchChainAsync({ chainId: Number(mandate.chainId) });
+
       // Convert gwei to wei for priority fee
       const priorityFeeWei = parseEther(priorityFeeGwei.toString(), 'gwei');
       
@@ -91,7 +95,8 @@ export function useFill() {
           functionName: 'petition',
           args: [claim, mandate, directive]
         }),
-        maxPriorityFeePerGas: priorityFeeWei
+        maxPriorityFeePerGas: priorityFeeWei,
+        maxFeePerGas: priorityFeeWei + ((await publicClient.getBlock()).baseFeePerGas! * 120n) / 100n
       };
 
       // Show initiated notification

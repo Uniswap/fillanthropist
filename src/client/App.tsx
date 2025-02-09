@@ -332,7 +332,6 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <button
                     onClick={async () => {
                       try {
-                        await switchChainAsync({ chainId: Number(request.compact.mandate.chainId) });
                         await fill(
                           request.compact.mandate.tribunal as `0x${string}`,
                           {
@@ -374,7 +373,6 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <button
                     onClick={async () => {
                       try {
-                        await switchChainAsync({ chainId: Number(request.compact.mandate.chainId) });
                         await fill(
                           request.compact.mandate.tribunal as `0x${string}`,
                           {
