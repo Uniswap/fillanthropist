@@ -52,13 +52,26 @@ interface BalanceInfo {
 }
 
 function RequestCard({ request }: { request: StoredRequest & { clientKey: string } }) {
-  const [priorityFee, setPriorityFee] = useState(0);
+  // Store the raw slider value (0-100) and derived priority fee separately
+  const [sliderValue, setSliderValue] = useState(50); // Default to midpoint
+  const [priorityFee, setPriorityFee] = useState(1); // Default to 1 gwei (midpoint)
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { address } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const { approve, approveMax, isLoading: isApproving } = useERC20(request.compact.mandate.token as `0x${string}`);
   const { fill } = useFill();
+
+  // Convert slider value to priority fee using quadratic curve
+  const handleSliderChange = (value: number) => {
+    setSliderValue(value);
+    // At slider value 50 (midpoint) -> 1 gwei
+    // At slider value 100 (max) -> 100 gwei
+    // Use quadratic curve for smooth progression
+    const normalizedValue = value / 100;
+    const priorityFeeGwei = normalizedValue * normalizedValue * 100;
+    setPriorityFee(priorityFeeGwei);
+  };
 
   // Fetch balance and allowance when account is connected
   useEffect(() => {
@@ -276,15 +289,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-gray-300">Priority Fee</label>
-            <span className="text-sm text-gray-400">{priorityFee} gwei</span>
+            <span className="text-sm text-gray-400">{priorityFee.toFixed(2)} gwei</span>
           </div>
           <input
             type="range"
             min="0"
-            max="10"
-            step="0.1"
-            value={priorityFee}
-            onChange={(e) => setPriorityFee(parseFloat(e.target.value))}
+            max="100"
+            step="1"
+            value={sliderValue}
+            onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
             className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#00ff00]"
           />
           <div className="flex justify-between items-center mt-2">
@@ -336,7 +349,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                           request.compact.mandate.tribunal as `0x${string}`,
                           {
                             chainId: request.chainId,
-                            compact: request.compact,
+                            arbiter: request.compact.arbiter,
+                            sponsor: request.compact.sponsor,
+                            nonce: request.compact.nonce,
+                            expires: request.compact.expires,
+                            id: request.compact.id,
+                            maximumAmount: request.compact.amount,
                             sponsorSignature: request.sponsorSignature,
                             allocatorSignature: request.allocatorSignature
                           },
@@ -377,7 +395,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                           request.compact.mandate.tribunal as `0x${string}`,
                           {
                             chainId: request.chainId,
-                            compact: request.compact,
+                            arbiter: request.compact.arbiter,
+                            sponsor: request.compact.sponsor,
+                            nonce: request.compact.nonce,
+                            expires: request.compact.expires,
+                            id: request.compact.id,
+                            maximumAmount: request.compact.amount,
                             sponsorSignature: request.sponsorSignature,
                             allocatorSignature: request.allocatorSignature
                           },

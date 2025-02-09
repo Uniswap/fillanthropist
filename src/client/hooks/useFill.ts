@@ -44,22 +44,16 @@ export function useFill() {
             stateMutability: 'payable',
             inputs: [
               {
-                name: 'claim',
+                name: 'compact',
                 type: 'tuple',
                 components: [
                   { name: 'chainId', type: 'uint256' },
-                  {
-                    name: 'compact',
-                    type: 'tuple',
-                    components: [
-                      { name: 'arbiter', type: 'address' },
-                      { name: 'sponsor', type: 'address' },
-                      { name: 'nonce', type: 'uint256' },
-                      { name: 'expires', type: 'uint256' },
-                      { name: 'id', type: 'uint256' },
-                      { name: 'amount', type: 'uint256' }
-                    ]
-                  },
+                  { name: 'arbiter', type: 'address' },
+                  { name: 'sponsor', type: 'address' },
+                  { name: 'nonce', type: 'uint256' },
+                  { name: 'expires', type: 'uint256' },
+                  { name: 'id', type: 'uint256' },
+                  { name: 'maximumAmount', type: 'uint256' },
                   { name: 'sponsorSignature', type: 'bytes' },
                   { name: 'allocatorSignature', type: 'bytes' }
                 ]
