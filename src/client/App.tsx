@@ -509,7 +509,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                <span className="text-gray-400">Dispensation: </span>
+                <span className="text-gray-400">Dispensation (quote): </span>
                 <span className="text-gray-100">
                   {formatAmount(request.context?.dispensation)}
                   {request.context?.dispensationUSD && (
@@ -518,6 +518,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                     </span>
                   )}
                 </span>
+              </div>
+              <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                <span className="text-gray-400">Dispensation (latest): </span>
+                <QuoteDispensation
+                  compact={request.compact}
+                  mandate={request.compact.mandate}
+                  claimant={address || ''}
+                  targetChainId={Number(request.chainId)}
+                />
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Witness Type: </span>
@@ -595,6 +604,64 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
       </div>
     </div>
   );
+}
+
+// Component to fetch and display quote dispensation
+function QuoteDispensation({ 
+  compact, 
+  mandate, 
+  claimant, 
+  targetChainId 
+}: { 
+  compact: any
+  mandate: any
+  claimant: string
+  targetChainId: number
+}) {
+  const [quoteDispensation, setQuoteDispensation] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchQuoteDispensation = async () => {
+      if (!claimant) return;
+      
+      try {
+        const response = await fetch('/api/quote-dispensation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            compact,
+            mandate,
+            claimant,
+            targetChainId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch quote dispensation');
+        }
+
+        const data = await response.json();
+        setQuoteDispensation(data.dispensation);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to fetch quote dispensation');
+      }
+    };
+
+    fetchQuoteDispensation();
+  }, [compact, mandate, claimant, targetChainId]);
+
+  if (error) {
+    return <span className="text-red-400">{error}</span>;
+  }
+
+  if (!quoteDispensation) {
+    return <span className="text-gray-400">Loading...</span>;
+  }
+
+  return <span className="text-gray-100">{formatAmount(quoteDispensation)}</span>;
 }
 
 function AppContent() {

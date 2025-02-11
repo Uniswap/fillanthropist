@@ -3,8 +3,8 @@ import type { BalanceCheckRequest, BalanceCheckResponse } from '../types/broadca
 
 // RPC URLs for supported chains
 const RPC_URLS: { [chainId: number]: string } = {
-  10: process.env.OPTIMISM_RPC || 'https://optimism.llamarpc.com',
-  8453: process.env.BASE_RPC || 'https://base.llamarpc.com'
+  10: process.env.OPTIMISM_RPC_URL || 'https://optimism.llamarpc.com',
+  8453: process.env.BASE_RPC_URL || 'https://base.llamarpc.com'
 }
 
 export async function checkBalanceAndAllowance(

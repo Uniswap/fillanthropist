@@ -1,27 +1,29 @@
 import dotenv from 'dotenv';
-// Load environment variables before other imports
-dotenv.config();
-
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import type { BroadcastRequest, BalanceCheckRequest } from '../types/broadcast';
 import { broadcastStore } from './store';
 import { WebSocketManager } from './websocket';
 import { checkBalanceAndAllowance } from './utils';
 import { deriveClaimHash } from '../client/utils';
+import { TribunalService } from './services/TribunalService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load environment variables before initializing services
+dotenv.config({ path: join(dirname(__dirname), '..', '.env') });
 
 const app = express();
 const server = createServer(app);
 const serverUrl = process.env.SERVER_URL || 'http://localhost:3001';
 const [, , host, port] = serverUrl.match(/^(https?:\/\/)?([^:]+):(\d+)$/) || [];
 
-// Initialize WebSocket manager
+// Initialize services
+const tribunalService = new TribunalService();
 const wsManager = new WebSocketManager(server);
 
 // Middleware
@@ -59,6 +61,39 @@ app.use(express.json());
 
 // Serve static files from the dist directory
 app.use(express.static(join(__dirname, '../../dist')));
+
+// Get quote dispensation endpoint
+app.post('/api/quote-dispensation', async (req, res) => {
+  const requestTime = new Date().toISOString();
+  console.log(`[${requestTime}] Received POST request to /api/quote-dispensation`);
+
+  try {
+    const { compact, mandate, claimant, targetChainId } = req.body;
+
+    // Validate request parameters
+    if (!compact) throw new Error('Compact data is required');
+    if (!mandate) throw new Error('Mandate data is required');
+    if (!claimant) throw new Error('Claimant address is required');
+    if (!targetChainId) throw new Error('Target chain ID is required');
+    if (!isValidAddress(claimant)) throw new Error('Invalid claimant address');
+
+    // Get quote dispensation
+    const dispensation = await tribunalService.getQuote(
+      compact,
+      mandate,
+      claimant,
+      targetChainId
+    );
+
+    console.log(`[${requestTime}] Quote dispensation retrieved for ID ${compact.id}`);
+    res.json({ dispensation: dispensation.toString() });
+  } catch (error) {
+    console.error('Error getting quote dispensation:', error);
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Invalid quote dispensation request'
+    });
+  }
+});
 
 // Balance check endpoint
 app.post('/api/check-balance', async (req, res) => {
