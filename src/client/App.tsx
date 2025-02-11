@@ -668,7 +668,12 @@ function QuoteDispensation({
     return <span className="text-gray-400">Loading...</span>;
   }
 
-  return <span className="text-gray-100">{formatAmount(quoteDispensation)}</span>;
+  const bufferedDispensation = (BigInt(quoteDispensation) * 105n) / 100n; // Add 5% buffer
+  return (
+    <span className="text-gray-100">
+      {formatAmount(quoteDispensation)} ({formatAmount(bufferedDispensation.toString())} with 5% buffer)
+    </span>
+  );
 }
 
 function AppContent() {

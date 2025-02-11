@@ -27,11 +27,20 @@ export function useFill() {
       // Convert gwei to wei for priority fee
       const priorityFeeWei = parseEther(priorityFeeGwei.toString(), 'gwei');
       
+      // Add 5% buffer to dispensation
+      const bufferedDispensation = (BigInt(dispensation) * 105n) / 100n;
+
       // Calculate total value to send
-      // If token is address(0), add settlement amount to dispensation
+      // If token is address(0), add settlement amount to buffered dispensation
       const value = mandate.token === '0x0000000000000000000000000000000000000000' 
-        ? BigInt(dispensation) + BigInt(settlementAmount)
-        : BigInt(dispensation);
+        ? bufferedDispensation + BigInt(settlementAmount)
+        : bufferedDispensation;
+
+      // Create directive with buffered dispensation
+      const directiveWithBuffer = {
+        ...directive,
+        dispensation: bufferedDispensation.toString()
+      };
 
       // Prepare transaction
       const tx = {
@@ -87,7 +96,7 @@ export function useFill() {
             ]
           }],
           functionName: 'petition',
-          args: [claim, mandate, directive]
+          args: [claim, mandate, directiveWithBuffer]
         }),
         maxPriorityFeePerGas: priorityFeeWei,
         maxFeePerGas: priorityFeeWei + ((await publicClient.getBlock()).baseFeePerGas! * 120n) / 100n
