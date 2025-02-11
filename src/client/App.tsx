@@ -608,6 +608,31 @@ function AppContent() {
     return `${request.chainId}-${request.claimHash}-${request.timestamp}`;
   }, []);
 
+  // Fetch initial requests when component mounts
+  useEffect(() => {
+    const fetchInitialRequests = async () => {
+      try {
+        const response = await fetch('/api/broadcasts');
+        if (!response.ok) {
+          throw new Error('Failed to fetch initial requests');
+        }
+        const data = await response.json();
+        // Add clientKey to each request
+        const requestsWithKeys = data.map((request: StoredRequest) => ({
+          ...request,
+          clientKey: generateClientKey(request)
+        }));
+        setRequests(requestsWithKeys);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Failed to fetch initial requests');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialRequests();
+  }, [generateClientKey]);
+
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === 'newRequest') {
       const requestWithKey = {
