@@ -68,6 +68,8 @@ app.post('/api/quote-dispensation', async (req, res) => {
   console.log(`[${requestTime}] Received POST request to /api/quote-dispensation`);
 
   try {
+    console.log('[quote-dispensation] Request body:', JSON.stringify(req.body, null, 2));
+    
     const { compact, mandate, claimant, targetChainId } = req.body;
 
     // Validate request parameters
@@ -76,11 +78,50 @@ app.post('/api/quote-dispensation', async (req, res) => {
     if (!claimant) throw new Error('Claimant address is required');
     if (!targetChainId) throw new Error('Target chain ID is required');
     if (!isValidAddress(claimant)) throw new Error('Invalid claimant address');
+    // Extract signatures from the request
+    const sponsorSignature = compact.sponsorSignature;
+    const allocatorSignature = compact.allocatorSignature;
+
+    if (!sponsorSignature) throw new Error('Sponsor signature is required');
+    if (!allocatorSignature) throw new Error('Allocator signature is required');
+    
+    // Validate signature format and length (65 bytes = 130 hex chars + '0x' prefix)
+    const isValidSignature = (sig: string) => {
+      if (!sig.startsWith('0x')) return false;
+      const hex = sig.slice(2);
+      return hex.length === 128 && /^[0-9a-fA-F]+$/.test(hex);
+    };
+    
+    if (!isValidSignature(sponsorSignature)) throw new Error('Invalid sponsor signature format - must be 64 bytes');
+    if (!isValidSignature(allocatorSignature)) throw new Error('Invalid allocator signature format - must be 64 bytes');
+
+    // Transform data for TribunalService
+    const transformedCompact = {
+      chainId: Number(mandate.chainId),
+      arbiter: compact.arbiter,
+      sponsor: compact.sponsor,
+      nonce: BigInt(compact.nonce),
+      expires: BigInt(compact.expires),
+      id: BigInt(compact.id),
+      maximumAmount: BigInt(compact.amount), // Convert amount to maximumAmount
+      sponsorSignature: sponsorSignature,
+      allocatorSignature: allocatorSignature
+    };
+
+    const transformedMandate = {
+      recipient: mandate.recipient,
+      expires: BigInt(mandate.expires),
+      token: mandate.token,
+      minimumAmount: BigInt(mandate.minimumAmount),
+      baselinePriorityFee: BigInt(mandate.baselinePriorityFee),
+      scalingFactor: BigInt(mandate.scalingFactor),
+      salt: mandate.salt,
+    };
 
     // Get quote dispensation
     const dispensation = await tribunalService.getQuote(
-      compact,
-      mandate,
+      transformedCompact,
+      transformedMandate,
       claimant,
       targetChainId
     );

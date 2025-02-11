@@ -121,6 +121,28 @@ export class TribunalService {
       const client = this.getClientForChain(targetChainId)
       const tribunalAddress = this.getTribunalAddress(targetChainId)
 
+      console.log('[TribunalService] Simulating quote with params:', {
+        address: tribunalAddress,
+        functionName: 'quote',
+        args: [
+          {
+            ...compact,
+            nonce: compact.nonce.toString(),
+            expires: compact.expires.toString(),
+            id: compact.id.toString(),
+            maximumAmount: compact.maximumAmount.toString(),
+          },
+          {
+            ...mandate,
+            expires: mandate.expires.toString(),
+            minimumAmount: mandate.minimumAmount.toString(),
+            baselinePriorityFee: mandate.baselinePriorityFee.toString(),
+            scalingFactor: mandate.scalingFactor.toString(),
+          },
+          claimant
+        ]
+      })
+
       // Call the quote function on the tribunal contract
       const { result: dispensation } = await client.simulateContract({
         address: tribunalAddress,
@@ -153,17 +175,31 @@ export class TribunalService {
 
       return dispensation
     } catch (error) {
+      // Log the input parameters before any JSON stringification
+      console.error('[TribunalService] Input parameters:')
+      console.error('compact:', {
+        chainId: compact.chainId,
+        arbiter: compact.arbiter,
+        sponsor: compact.sponsor,
+        nonce: compact.nonce.toString(),
+        expires: compact.expires.toString(),
+        id: compact.id.toString(),
+        maximumAmount: compact.maximumAmount.toString(),
+        sponsorSignature: compact.sponsorSignature,
+        allocatorSignature: compact.allocatorSignature,
+      })
+      console.error('mandate:', {
+        recipient: mandate.recipient,
+        expires: mandate.expires.toString(),
+        token: mandate.token,
+        minimumAmount: mandate.minimumAmount.toString(),
+        baselinePriorityFee: mandate.baselinePriorityFee.toString(),
+        scalingFactor: mandate.scalingFactor.toString(),
+        salt: mandate.salt,
+      })
+      console.error('claimant:', claimant)
+      console.error('targetChainId:', targetChainId)
       console.error(`[TribunalService] Error getting tribunal quote: ${error}`)
-      console.error(
-        JSON.stringify(
-          {
-            functionName: 'quote',
-            args: [compact, mandate, claimant],
-          },
-          null,
-          2
-        )
-      )
       throw error
     }
   }

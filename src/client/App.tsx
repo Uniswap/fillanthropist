@@ -526,6 +526,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   mandate={request.compact.mandate}
                   claimant={address || ''}
                   targetChainId={Number(request.chainId)}
+                  request={request}
                 />
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
@@ -611,12 +612,14 @@ function QuoteDispensation({
   compact, 
   mandate, 
   claimant, 
-  targetChainId 
+  targetChainId ,
+  request
 }: { 
   compact: any
   mandate: any
   claimant: string
   targetChainId: number
+  request: StoredRequest & { clientKey: string }
 }) {
   const [quoteDispensation, setQuoteDispensation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -632,7 +635,11 @@ function QuoteDispensation({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            compact,
+            compact: {
+              ...compact,
+              sponsorSignature: request.sponsorSignature,
+              allocatorSignature: request.allocatorSignature
+            },
             mandate,
             claimant,
             targetChainId,
