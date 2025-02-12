@@ -348,21 +348,21 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                         await fill(
                           request.compact.mandate.tribunal as `0x${string}`,
                           {
-                            chainId: request.chainId,
-                            arbiter: request.compact.arbiter,
-                            sponsor: request.compact.sponsor,
-                            nonce: request.compact.nonce,
-                            expires: request.compact.expires,
-                            id: request.compact.id,
-                            maximumAmount: request.compact.amount,
-                            sponsorSignature: request.sponsorSignature,
-                            allocatorSignature: request.allocatorSignature
+                            chainId: BigInt(request.chainId),
+                            compact: {
+                              arbiter: request.compact.arbiter as `0x${string}`,
+                              sponsor: request.compact.sponsor as `0x${string}`,
+                              nonce: BigInt(request.compact.nonce),
+                              expires: BigInt(request.compact.expires),
+                              id: BigInt(request.compact.id),
+                              amount: BigInt(request.compact.amount)
+                            },
+                            sponsorSignature: request.sponsorSignature as `0x${string}`,
+                            allocatorSignature: request.allocatorSignature as `0x${string}`
                           },
                           request.compact.mandate,
-                          {
-                            claimant: address,
-                            dispensation: request.context.dispensation
-                          },
+                          BigInt(request.compact.mandate.chainId),
+                          address as `0x${string}`,
                           priorityFee,
                           request.context.dispensation,
                           calculatedSettlement
@@ -394,21 +394,21 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                         await fill(
                           request.compact.mandate.tribunal as `0x${string}`,
                           {
-                            chainId: request.chainId,
-                            arbiter: request.compact.arbiter,
-                            sponsor: request.compact.sponsor,
-                            nonce: request.compact.nonce,
-                            expires: request.compact.expires,
-                            id: request.compact.id,
-                            maximumAmount: request.compact.amount,
+                            chainId: BigInt(request.chainId),
+                            compact: {
+                              arbiter: request.compact.arbiter,
+                              sponsor: request.compact.sponsor,
+                              nonce: BigInt(request.compact.nonce),
+                              expires: BigInt(request.compact.expires),
+                              id: BigInt(request.compact.id),
+                              amount: BigInt(request.compact.amount)
+                            },
                             sponsorSignature: request.sponsorSignature,
                             allocatorSignature: request.allocatorSignature
                           },
                           request.compact.mandate,
-                          {
-                            claimant: address,
-                            dispensation: request.context.dispensation
-                          },
+                          BigInt(request.compact.mandate.chainId),
+                          address as `0x${string}`,
                           priorityFee,
                           request.context.dispensation,
                           calculatedSettlement
