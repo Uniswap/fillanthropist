@@ -7,16 +7,22 @@ const TRIBUNAL_ABI = [
       {
         components: [
           { name: 'chainId', type: 'uint256' },
-          { name: 'arbiter', type: 'address' },
-          { name: 'sponsor', type: 'address' },
-          { name: 'nonce', type: 'uint256' },
-          { name: 'expires', type: 'uint256' },
-          { name: 'id', type: 'uint256' },
-          { name: 'maximumAmount', type: 'uint256' },
+          {
+            components: [
+              { name: 'arbiter', type: 'address' },
+              { name: 'sponsor', type: 'address' },
+              { name: 'nonce', type: 'uint256' },
+              { name: 'expires', type: 'uint256' },
+              { name: 'id', type: 'uint256' },
+              { name: 'amount', type: 'uint256' },
+            ],
+            name: 'compact',
+            type: 'tuple',
+          },
           { name: 'sponsorSignature', type: 'bytes' },
           { name: 'allocatorSignature', type: 'bytes' },
         ],
-        name: 'compact',
+        name: 'claim',
         type: 'tuple',
       },
       {
@@ -44,6 +50,7 @@ const TRIBUNAL_ABI = [
 export class TribunalService {
   private optimismClient: PublicClient
   private baseClient: PublicClient
+  private unichainClient: PublicClient
 
   constructor() {
     // Configure clients with specific settings for each chain
@@ -55,8 +62,13 @@ export class TribunalService {
       cacheTime: 4_000,
     }
 
-    const optimismRpcUrl = process.env.OPTIMISM_RPC_URL || 'https://optimism.llamarpc.com'
-    const baseRpcUrl = process.env.BASE_RPC_URL || 'https://base.llamarpc.com'
+    const optimismRpcUrl = process.env.OPTIMISM_RPC_URL
+    const baseRpcUrl = process.env.BASE_RPC_URL
+    const unichainRpcUrl = process.env.UNICHAIN_RPC_URL
+
+    if (!optimismRpcUrl) throw new Error('OPTIMISM_RPC_URL is required')
+    if (!baseRpcUrl) throw new Error('BASE_RPC_URL is required')
+    if (!unichainRpcUrl) throw new Error('UNICHAIN_RPC_URL is required')
 
     this.optimismClient = createPublicClient({
       ...commonConfig,
@@ -69,6 +81,25 @@ export class TribunalService {
       chain: base,
       transport: http(baseRpcUrl),
     }) as PublicClient
+
+    this.unichainClient = createPublicClient({
+      ...commonConfig,
+      chain: {
+        id: 130,
+        name: 'Unichain',
+        network: 'unichain',
+        nativeCurrency: {
+          decimals: 18,
+          name: 'Ether',
+          symbol: 'ETH',
+        },
+        rpcUrls: {
+          default: { http: [unichainRpcUrl] },
+          public: { http: [unichainRpcUrl] },
+        },
+      },
+      transport: http(unichainRpcUrl),
+    }) as PublicClient
   }
 
   private getClientForChain(chainId: number): PublicClient {
@@ -77,19 +108,23 @@ export class TribunalService {
         return this.optimismClient
       case 8453:
         return this.baseClient
+      case 130:
+        return this.unichainClient
       default:
-        throw new Error(`Unsupported chain ID: ${chainId}. Only Optimism (10) and Base (8453) are supported.`)
+        throw new Error(`Unsupported chain ID: ${chainId}. Only Optimism (10), Base (8453), and Unichain (130) are supported.`)
     }
   }
 
   private getTribunalAddress(chainId: number): `0x${string}` {
     switch (chainId) {
       case 10:
-        return '0xf4eA570740Ce552632F19c8E92691c6A5F6374D9'
+        return '0xb7dD9E63A0d594C6e58c84bB85660819B7941770'
       case 8453:
-        return '0x339B234fdBa8C5C77c43AA01a6ad38071B7984F1'
+        return '0xC0AdfB14A08c5A3f0d6c21cFa601b43bA93B3c8A'
+      case 130:
+        return '0x7f268357A8c2552623316e2562D90e642bB538E5'
       default:
-        throw new Error(`No tribunal address for chain ID: ${chainId}. Only Optimism (10) and Base (8453) are supported.`)
+        throw new Error(`No tribunal address for chain ID: ${chainId}. Only Optimism (10), Base (8453), and Unichain (130) are supported.`)
     }
   }
 
@@ -151,12 +186,14 @@ export class TribunalService {
         args: [
           {
             chainId: compact.chainId,
-            arbiter: compact.arbiter as `0x${string}`,
-            sponsor: compact.sponsor as `0x${string}`,
-            nonce: compact.nonce,
-            expires: compact.expires,
-            id: compact.id,
-            maximumAmount: compact.maximumAmount,
+            compact: {
+              arbiter: compact.arbiter as `0x${string}`,
+              sponsor: compact.sponsor as `0x${string}`,
+              nonce: compact.nonce,
+              expires: compact.expires,
+              id: compact.id,
+              amount: compact.maximumAmount,
+            },
             sponsorSignature: compact.sponsorSignature as `0x${string}`,
             allocatorSignature: compact.allocatorSignature as `0x${string}`,
           },

@@ -1,5 +1,24 @@
 import { http } from 'wagmi';
+import type { Chain } from 'viem';
 import { optimism, base } from 'wagmi/chains';
+
+// Define Unichain
+const unichain = {
+  id: 130,
+  name: 'Unichain',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'UNI',
+    symbol: 'UNI',
+  },
+  rpcUrls: {
+    default: { http: [import.meta.env.VITE_UNICHAIN_RPC_URL || 'https://mainnet.unichain.org'] },
+    public: { http: [import.meta.env.VITE_UNICHAIN_RPC_URL || 'https://mainnet.unichain.org'] },
+  },
+  blockExplorers: {
+    default: { name: 'Uniscan', url: 'https://uniscan.xyz' },
+  },
+} as const satisfies Chain;
 import {
   getDefaultConfig,
   RainbowKitProvider,
@@ -15,7 +34,7 @@ if (!projectId) {
 }
 
 // Configure supported chains
-const chains = [optimism, base] as const;
+const chains = [optimism, base, unichain] as const;
 
 // Create wagmi config with RainbowKit
 export const config = getDefaultConfig({
@@ -25,6 +44,7 @@ export const config = getDefaultConfig({
   transports: {
     [optimism.id]: http(),
     [base.id]: http(),
+    [unichain.id]: http(),
   },
 });
 

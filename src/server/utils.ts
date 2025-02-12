@@ -4,6 +4,7 @@ import type { BalanceCheckRequest, BalanceCheckResponse } from '../types/broadca
 // RPC URLs for supported chains
 const RPC_URLS: { [chainId: number]: string } = {
   10: process.env.OPTIMISM_RPC_URL || 'https://optimism.llamarpc.com',
+  130: process.env.UNICHAIN_RPC_URL || 'https://mainnet.unichain.org',
   8453: process.env.BASE_RPC_URL || 'https://base.llamarpc.com'
 }
 
@@ -15,7 +16,7 @@ export async function checkBalanceAndAllowance(
     if (!rpcUrl) {
       return { 
         balance: '0',
-        error: `Unsupported chain ID: ${request.chainId}. Only Optimism (10) and Base (8453) are supported.`
+        error: `Unsupported chain ID: ${request.chainId}. Only Optimism (10), Base (8453), and Unichain (130) are supported.`
       }
     }
 
