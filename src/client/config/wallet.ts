@@ -8,8 +8,8 @@ const unichain = {
   name: 'Unichain',
   nativeCurrency: {
     decimals: 18,
-    name: 'UNI',
-    symbol: 'UNI',
+    name: 'ETH',
+    symbol: 'ETH',
   },
   rpcUrls: {
     default: { http: [import.meta.env.VITE_UNICHAIN_RPC_URL || 'https://mainnet.unichain.org'] },
