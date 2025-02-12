@@ -360,7 +360,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                             sponsorSignature: request.sponsorSignature as `0x${string}`,
                             allocatorSignature: request.allocatorSignature as `0x${string}`
                           },
-                          request.compact.mandate,
+                          {
+                            recipient: request.compact.mandate.recipient as `0x${string}`,
+                            expires: BigInt(request.compact.mandate.expires),
+                            token: request.compact.mandate.token as `0x${string}`,
+                            minimumAmount: BigInt(request.compact.mandate.minimumAmount),
+                            baselinePriorityFee: BigInt(request.compact.mandate.baselinePriorityFee),
+                            scalingFactor: BigInt(request.compact.mandate.scalingFactor),
+                            salt: request.compact.mandate.salt as `0x${string}`
+                          },
                           BigInt(request.compact.mandate.chainId),
                           address as `0x${string}`,
                           priorityFee,
@@ -396,17 +404,25 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                           {
                             chainId: BigInt(request.chainId),
                             compact: {
-                              arbiter: request.compact.arbiter,
-                              sponsor: request.compact.sponsor,
+                              arbiter: request.compact.arbiter as `0x${string}`,
+                              sponsor: request.compact.sponsor as `0x${string}`,
                               nonce: BigInt(request.compact.nonce),
                               expires: BigInt(request.compact.expires),
                               id: BigInt(request.compact.id),
                               amount: BigInt(request.compact.amount)
                             },
-                            sponsorSignature: request.sponsorSignature,
-                            allocatorSignature: request.allocatorSignature
+                            sponsorSignature: request.sponsorSignature as `0x${string}`,
+                            allocatorSignature: request.allocatorSignature as `0x${string}`
                           },
-                          request.compact.mandate,
+                          {
+                            recipient: request.compact.mandate.recipient as `0x${string}`,
+                            expires: BigInt(request.compact.mandate.expires),
+                            token: request.compact.mandate.token as `0x${string}`,
+                            minimumAmount: BigInt(request.compact.mandate.minimumAmount),
+                            baselinePriorityFee: BigInt(request.compact.mandate.baselinePriorityFee),
+                            scalingFactor: BigInt(request.compact.mandate.scalingFactor),
+                            salt: request.compact.mandate.salt as `0x${string}`
+                          },
                           BigInt(request.compact.mandate.chainId),
                           address as `0x${string}`,
                           priorityFee,
