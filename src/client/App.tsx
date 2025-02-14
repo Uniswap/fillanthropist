@@ -159,7 +159,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   const [sliderValue, setSliderValue] = useState(50); // Default to midpoint
   const [priorityFee, setPriorityFee] = useState(1); // Default to 1 gwei (midpoint)
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo | null>(null);
-  const [latestDispensation, setLatestDispensation] = useState<string | null>(null);
+  const [latestDispensation, setLatestDispensation] = useState<{ raw: string; buffered: string } | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { address } = useAccount();
   const { switchChainAsync } = useSwitchChain();
@@ -536,9 +536,16 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <button
                     onClick={async () => {
                       try {
-                        await fill(
-                          request.compact.mandate.tribunal as `0x${string}`,
-                          {
+                        // Log dispensation values
+                        console.log('Dispensation values:', {
+                          latestDispensation,
+                          contextDispensation: request.context.dispensation,
+                          finalDispensation: latestDispensation || request.context.dispensation
+                        });
+                        
+                        await fill({
+                          tribunalAddress: request.compact.mandate.tribunal as `0x${string}`,
+                          claim: {
                             chainId: BigInt(request.chainId),
                             compact: {
                               arbiter: request.compact.arbiter as `0x${string}`,
@@ -551,7 +558,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                             sponsorSignature: request.sponsorSignature as `0x${string}`,
                             allocatorSignature: request.allocatorSignature as `0x${string}`
                           },
-                          {
+                          mandate: {
                             recipient: request.compact.mandate.recipient as `0x${string}`,
                             expires: BigInt(request.compact.mandate.expires),
                             token: request.compact.mandate.token as `0x${string}`,
@@ -560,11 +567,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                             scalingFactor: BigInt(request.compact.mandate.scalingFactor),
                             salt: request.compact.mandate.salt as `0x${string}`
                           },
-                          BigInt(request.compact.mandate.chainId),
-                          address as `0x${string}`,
-                          priorityFee,
-                          latestDispensation || request.context.dispensation,
-                          calculatedSettlement
+                          mandateChainId: BigInt(request.compact.mandate.chainId),
+                          claimant: address as `0x${string}`,
+                          priorityFeeGwei: priorityFee,
+                          settlementAmount: calculatedSettlement,
+                          dispensation: latestDispensation?.buffered || request.context.dispensation
+                        }
                         );
                       } catch (error) {
                         console.error('Fill error:', error);
@@ -590,9 +598,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <button
                     onClick={async () => {
                       try {
-                        await fill(
-                          request.compact.mandate.tribunal as `0x${string}`,
-                          {
+                        await fill({
+                          tribunalAddress: request.compact.mandate.tribunal as `0x${string}`,
+                          claim: {
                             chainId: BigInt(request.chainId),
                             compact: {
                               arbiter: request.compact.arbiter as `0x${string}`,
@@ -605,7 +613,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                             sponsorSignature: request.sponsorSignature as `0x${string}`,
                             allocatorSignature: request.allocatorSignature as `0x${string}`
                           },
-                          {
+                          mandate: {
                             recipient: request.compact.mandate.recipient as `0x${string}`,
                             expires: BigInt(request.compact.mandate.expires),
                             token: request.compact.mandate.token as `0x${string}`,
@@ -614,11 +622,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                             scalingFactor: BigInt(request.compact.mandate.scalingFactor),
                             salt: request.compact.mandate.salt as `0x${string}`
                           },
-                          BigInt(request.compact.mandate.chainId),
-                          address as `0x${string}`,
-                          priorityFee,
-                          latestDispensation || request.context.dispensation,
-                          calculatedSettlement
+                          mandateChainId: BigInt(request.compact.mandate.chainId),
+                          claimant: address as `0x${string}`,
+                          priorityFeeGwei: priorityFee,
+                          settlementAmount: calculatedSettlement,
+                          dispensation: latestDispensation?.buffered || request.context.dispensation
+                        }
                         );
                       } catch (error) {
                         console.error('Fill error:', error);
@@ -871,10 +880,11 @@ function QuoteDispensation({
   claimant: string
   targetChainId: number
   request: StoredRequest & { clientKey: string }
-  onQuoteDispensation: (dispensation: string | null) => void
+  onQuoteDispensation: (dispensation: { raw: string; buffered: string } | null) => void
 }) {
-  const [quoteDispensation, setQuoteDispensation] = useState<string | null>(null);
+  const [quoteDispensation, setQuoteDispensation] = useState<{ raw: string; buffered: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchQuoteDispensation = async () => {
@@ -910,8 +920,11 @@ function QuoteDispensation({
         }
 
         const data = await response.json();
-        setQuoteDispensation(data.dispensation);
-        onQuoteDispensation(data.dispensation);
+        const raw = data.dispensation;
+        const buffered = ((BigInt(data.dispensation) * 105n) / 100n).toString();
+        const dispensation = { raw, buffered };
+        setQuoteDispensation(dispensation);
+        onQuoteDispensation(dispensation);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to fetch quote dispensation');
       }
@@ -928,10 +941,9 @@ function QuoteDispensation({
     return <span className="text-gray-400">Loading...</span>;
   }
 
-  const bufferedDispensation = (BigInt(quoteDispensation) * 105n) / 100n; // Add 5% buffer
   return (
     <span className="text-gray-100">
-      {Number(formatUnits(BigInt(quoteDispensation), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH ({Number(formatUnits(bufferedDispensation, 18)).toFixed(8).replace(/\.?0+$/, '')} ETH with 5% buffer)
+      {Number(formatUnits(BigInt(quoteDispensation.raw), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH ({Number(formatUnits(BigInt(quoteDispensation.buffered), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH with 5% buffer)
     </span>
   );
 }

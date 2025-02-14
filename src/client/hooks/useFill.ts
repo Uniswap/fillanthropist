@@ -10,8 +10,8 @@ export function useFill() {
   const { switchChainAsync } = useSwitchChain();
   const { showNotification } = useNotification();
 
-  const fill = useCallback(async (
-    tribunalAddress: `0x${string}`,
+  interface FillParams {
+    tribunalAddress: `0x${string}`;
     claim: {
       chainId: bigint;
       compact: {
@@ -24,7 +24,7 @@ export function useFill() {
       };
       sponsorSignature: `0x${string}`;
       allocatorSignature: `0x${string}`;
-    },
+    };
     mandate: {
       recipient: `0x${string}`;
       expires: bigint;
@@ -33,12 +33,24 @@ export function useFill() {
       baselinePriorityFee: bigint;
       scalingFactor: bigint;
       salt: `0x${string}`;
-    },
-    mandateChainId: bigint,
-    claimant: `0x${string}`,
-    priorityFeeGwei: number,
-    settlementAmount: string,
-    dispensation: string,
+    };
+    mandateChainId: bigint;
+    claimant: `0x${string}`;
+    priorityFeeGwei: number;
+    settlementAmount: string;
+    dispensation: string;
+  }
+
+  const fill = useCallback(async ({
+    tribunalAddress,
+    claim,
+    mandate,
+    mandateChainId,
+    claimant,
+    priorityFeeGwei,
+    settlementAmount,
+    dispensation,
+  }: FillParams
   ) => {
     if (!walletClient || !publicClient) throw new Error('Wallet not connected');
 
@@ -63,13 +75,56 @@ export function useFill() {
       // Convert gwei to wei for priority fee
       const priorityFeeWei = parseEther(priorityFeeGwei.toString(), 'gwei');
       
-      // Add 5% buffer to dispensation
-      const bufferedDispensation = (BigInt(dispensation) * 105n) / 100n;
+      // Add 25% buffer to dispensation
+      const bufferedDispensation = (BigInt(dispensation) * 125n) / 100n;
+
+      console.log('Fill value calculation:', {
+        isNativeToken: mandate.token === '0x0000000000000000000000000000000000000000',
+        rawDispensation: dispensation,
+        bufferedDispensation: bufferedDispensation.toString(),
+        settlementAmount,
+        finalValue: mandate.token === '0x0000000000000000000000000000000000000000'
+          ? (BigInt(settlementAmount) + bufferedDispensation).toString()
+          : bufferedDispensation.toString()
+      });
 
       // Calculate total value to send (settlement + buffered dispensation for native token, just buffered dispensation for ERC20)
       const value = mandate.token === '0x0000000000000000000000000000000000000000' 
         ? BigInt(settlementAmount) + bufferedDispensation
         : bufferedDispensation;
+
+      // Log the exact arguments being sent to the tribunal
+      console.log('Fill call arguments:', {
+        tribunalAddress,
+        value: value.toString(),
+        args: [
+          {
+            chainId: claim.chainId,
+            compact: {
+              arbiter: claim.compact.arbiter,
+              sponsor: claim.compact.sponsor,
+              nonce: claim.compact.nonce,
+              expires: claim.compact.expires,
+              id: claim.compact.id,
+              amount: claim.compact.amount
+            },
+            sponsorSignature: claim.sponsorSignature,
+            allocatorSignature: claim.allocatorSignature
+          },
+          {
+            recipient: mandate.recipient,
+            expires: mandate.expires,
+            token: mandate.token,
+            minimumAmount: mandate.minimumAmount,
+            baselinePriorityFee: mandate.baselinePriorityFee,
+            scalingFactor: mandate.scalingFactor,
+            salt: mandate.salt
+          },
+          claimant
+        ],
+        maxPriorityFeePerGas: priorityFeeWei.toString(),
+        maxFeePerGas: (priorityFeeWei + ((await publicClient.getBlock()).baseFeePerGas! * 120n) / 100n).toString()
+      });
 
       // Prepare transaction
       const tx = {
