@@ -41,11 +41,39 @@ const THE_COMPACT_ABI = [
   }
 ] as const
 
+enum ResetPeriod {
+  OneSecond,
+  FifteenSeconds,
+  OneMinute,
+  TenMinutes,
+  OneHourAndFiveMinutes,
+  OneDay,
+  SevenDaysAndOneHour,
+  ThirtyDays
+}
+
+enum ForcedWithdrawalStatus {
+  Disabled,
+  Pending,
+  Enabled
+}
+
+const RESET_PERIOD_SECONDS: { [key in ResetPeriod]: number } = {
+  [ResetPeriod.OneSecond]: 1,
+  [ResetPeriod.FifteenSeconds]: 15,
+  [ResetPeriod.OneMinute]: 60,
+  [ResetPeriod.TenMinutes]: 600,
+  [ResetPeriod.OneHourAndFiveMinutes]: 3900,
+  [ResetPeriod.OneDay]: 86400,
+  [ResetPeriod.SevenDaysAndOneHour]: 608400,
+  [ResetPeriod.ThirtyDays]: 2592000
+}
+
 interface LockDetails {
   token: `0x${string}`
   allocator: `0x${string}`
-  resetPeriod: number
-  noMultichain: boolean
+  resetPeriodSeconds: number
+  scope: 'Multichain' | 'SingleChain'
   tokenInfo?: {
     name: string
     symbol: string
@@ -54,8 +82,8 @@ interface LockDetails {
 }
 
 interface WithdrawalStatus {
-  status: number
-  withdrawableAt: bigint
+  status: ForcedWithdrawalStatus
+  withdrawableAt: bigint | null
 }
 
 export class TheCompactService {
@@ -189,11 +217,11 @@ export class TheCompactService {
       args: [id]
     })
 
-    const lockDetails = {
+    const lockDetails: Omit<LockDetails, 'tokenInfo'> = {
       token: details[0],
       allocator: details[1],
-      resetPeriod: details[2],
-      noMultichain: details[3]
+      resetPeriodSeconds: RESET_PERIOD_SECONDS[details[2] as ResetPeriod],
+      scope: details[3] ? 'SingleChain' as const : 'Multichain' as const
     }
 
     this.lockDetailsCache.set(cacheKey, lockDetails)
@@ -221,7 +249,10 @@ export class TheCompactService {
       args: [sponsor, id]
     })
 
-    return { status, withdrawableAt }
+    return { 
+      status,
+      withdrawableAt: status === ForcedWithdrawalStatus.Disabled ? null : withdrawableAt
+    }
   }
 
   async getLockDetailsWithStatus(
