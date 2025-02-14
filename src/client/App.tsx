@@ -327,12 +327,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
+                ID {request.compact.id}
+              </span>
+              <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
                 {request.lockDetails?.tokenInfo?.decimals !== undefined && balanceInfo?.decimals !== undefined
                   ? `${formatUnits(BigInt(request.compact.amount), request.lockDetails.tokenInfo.decimals)} ${request.lockDetails.tokenInfo.symbol} → >= ${formatUnits(BigInt(request.compact.mandate.minimumAmount), balanceInfo.decimals)} ${balanceInfo.symbol}`
                   : `${formatAmount(request.compact.amount)} → >= ${formatAmount(request.compact.mandate.minimumAmount)}`}
-              </span>
-              <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
-                ID {request.compact.id}
               </span>
               {request.context?.slippageBips !== undefined && (
                 <span className="px-2 py-1 text-xs bg-orange-500/10 text-orange-500 rounded">
@@ -702,21 +702,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   </span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                  <span className="text-gray-400">ID: </span>
-                  <span className="text-gray-100 break-all">{request.compact.id}</span>
-                </div>
-                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Amount: </span>
                   <span className="text-gray-100">
                     {request.lockDetails?.tokenInfo?.decimals !== undefined
                       ? `${formatUnits(BigInt(request.compact.amount), request.lockDetails.tokenInfo.decimals)} ${request.lockDetails.tokenInfo.symbol}`
                       : formatAmount(request.compact.amount)}
-                  </span>
-                </div>
-                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                  <span className="text-gray-400">Nonce: </span>
-                  <span className={`break-all ${request.lockDetails?.nonceConsumed ? 'text-red-500' : 'text-gray-100'}`}>
-                    {request.compact.nonce}{request.lockDetails?.nonceConsumed ? ' (consumed)' : ''}
                   </span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
@@ -726,6 +716,16 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                     <span className="ml-2">
                       <CountdownTimer timestamp={request.compact.expires} />
                     </span>
+                  </span>
+                </div>
+                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                  <span className="text-gray-400">ID: </span>
+                  <span className="text-gray-100 break-all">{request.compact.id}</span>
+                </div>
+                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                  <span className="text-gray-400">Nonce: </span>
+                  <span className={`break-all ${request.lockDetails?.nonceConsumed ? 'text-red-500' : 'text-gray-100'}`}>
+                    {request.compact.nonce}{request.lockDetails?.nonceConsumed ? ' (consumed)' : ''}
                   </span>
                 </div>
               </div>
