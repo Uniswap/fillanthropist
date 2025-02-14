@@ -18,20 +18,25 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format amounts - passing through raw values
-function formatAmount(amount: string): string;
-function formatAmount(amount: undefined): string;
-function formatAmount(amount: null): string;
-function formatAmount(amount: string | undefined | null): string {
+function formatAmount(amount: string | null | undefined = null): string {
   return amount ?? '0';
 }
 
 // Helper function to format timestamps
-const formatTimestamp = (timestamp: string) => {
+const formatTimestamp = (timestamp: string | undefined) => {
+  if (!timestamp) return '';
   const date = new Date(parseInt(timestamp, 10) * 1000);
+  const today = new Date();
+  const isToday = date.getDate() === today.getDate() &&
+                  date.getMonth() === today.getMonth() &&
+                  date.getFullYear() === today.getFullYear();
+  
   return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    ...(isToday ? {} : {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }),
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
@@ -48,7 +53,8 @@ interface BalanceInfo {
 }
 
 // CountdownTimer component to display time remaining
-function CountdownTimer({ timestamp }: { timestamp: string }) {
+function CountdownTimer({ timestamp }: { timestamp?: string }) {
+  if (!timestamp) return null;
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const intervalRef = useRef<NodeJS.Timeout>();
 
@@ -634,7 +640,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <span className="text-gray-100">
                     {formatTimestamp(request.compact.expires)}
                     <span className="ml-2">
-                      (<CountdownTimer timestamp={request.compact.expires} />)
+                      {request.compact.expires ? (
+                        (<CountdownTimer timestamp={request.compact.expires} />)
+                      ) : null}
                     </span>
                   </span>
                 </div>
@@ -724,7 +732,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <span className="text-gray-100">
                     {formatTimestamp(request.compact.mandate.expires)}
                     <span className="ml-2">
-                      (<CountdownTimer timestamp={request.compact.mandate.expires} />)
+                      {request.compact.mandate.expires ? (
+                        (<CountdownTimer timestamp={request.compact.mandate.expires} />)
+                      ) : null}
                     </span>
                   </span>
                 </div>
