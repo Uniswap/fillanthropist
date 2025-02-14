@@ -357,7 +357,16 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-gray-300">Priority Fee</label>
-            <span className="text-sm text-gray-400">{priorityFee.toFixed(2)} gwei</span>
+            <span className="text-sm text-gray-400">
+              {priorityFee >= 100 
+                ? priorityFee.toFixed(1)
+                : priorityFee >= 10
+                ? priorityFee.toFixed(2)
+                : priorityFee >= 1
+                ? priorityFee.toFixed(3)
+                : priorityFee.toFixed(4)
+              } gwei
+            </span>
           </div>
           <input
             type="range"
