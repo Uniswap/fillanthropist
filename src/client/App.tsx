@@ -59,10 +59,24 @@ interface BalanceInfo {
   decimals?: number;
 }
 
+interface CountdownTimerProps {
+  timestamp: string | undefined;
+}
+
 // CountdownTimer component to display time remaining
-function CountdownTimer({ timestamp }: { timestamp?: string }) {
-  if (!timestamp) return null;
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+function CountdownTimer({ timestamp }: CountdownTimerProps) {
+  // Early return if no timestamp or invalid
+  if (!timestamp || isNaN(parseInt(timestamp, 10))) {
+    return null;
+  }
+  // Calculate initial time remaining
+  const initialTimeRemaining = (() => {
+    const now = Math.floor(Date.now() / 1000);
+    const target = parseInt(timestamp, 10);
+    return target - now;
+  })();
+
+  const [timeRemaining, setTimeRemaining] = useState(() => initialTimeRemaining);
   const intervalRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
@@ -666,9 +680,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <span className="text-gray-100">
                     {formatTimestamp(request.compact.expires)}
                     <span className="ml-2">
-                      {request.compact.expires ? (
-                        <CountdownTimer timestamp={request.compact.expires} />
-                      ) : null}
+                      <CountdownTimer timestamp={request.compact.expires} />
                     </span>
                   </span>
                 </div>
@@ -766,9 +778,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <span className="text-gray-100">
                     {formatTimestamp(request.compact.mandate.expires)}
                     <span className="ml-2">
-                      {request.compact.mandate.expires ? (
-                        <CountdownTimer timestamp={request.compact.mandate.expires} />
-                      ) : null}
+                      <CountdownTimer timestamp={request.compact.mandate.expires} />
                     </span>
                   </span>
                 </div>
