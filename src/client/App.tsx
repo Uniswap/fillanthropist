@@ -463,7 +463,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               
               return 'text-[#00ff00]';
             })()}`}>
-              {formatUnits(BigInt(calculatedSettlement), balanceInfo?.decimals || 18)}
+              {formatUnits(BigInt(calculatedSettlement), balanceInfo?.decimals || 18)} {balanceInfo?.symbol || ''}
             </span>
           </div>
           
@@ -657,15 +657,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="flex gap-2">
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Spot: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.spotOutputAmount)}</span>
+                  <span className="text-gray-100">{request.context?.spotOutputAmount ? Number(formatUnits(BigInt(request.context.spotOutputAmount), balanceInfo?.decimals || 18)).toFixed(8).replace(/\.?0+$/, '') : '0'} {balanceInfo?.symbol || ''}</span>
                 </div>
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Direct: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountDirect)}</span>
+                  <span className="text-gray-100">{request.context?.quoteOutputAmountDirect ? Number(formatUnits(BigInt(request.context.quoteOutputAmountDirect), balanceInfo?.decimals || 18)).toFixed(8).replace(/\.?0+$/, '') : '0'} {balanceInfo?.symbol || ''}</span>
                 </div>
                 <div className="flex-1 p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Net: </span>
-                  <span className="text-gray-100">{formatAmount(request.context?.quoteOutputAmountNet)}</span>
+                  <span className="text-gray-100">{request.context?.quoteOutputAmountNet ? Number(formatUnits(BigInt(request.context.quoteOutputAmountNet), balanceInfo?.decimals || 18)).toFixed(8).replace(/\.?0+$/, '') : '0'} {balanceInfo?.symbol || ''}</span>
                 </div>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
@@ -721,11 +721,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Token: </span>
-                  <span className="text-gray-100 break-all">{request.compact.mandate.token}</span>
+                  <span className="text-gray-100 break-all">{request.compact.mandate.token} {balanceInfo?.name ? `(${balanceInfo.name})` : ''}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Minimum Amount: </span>
-                  <span className="text-gray-100">{formatAmount(request.compact.mandate.minimumAmount)}</span>
+                  <span className="text-gray-100">{formatUnits(BigInt(request.compact.mandate.minimumAmount), balanceInfo?.decimals || 18)} {balanceInfo?.symbol || ''}</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
