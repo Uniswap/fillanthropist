@@ -38,7 +38,12 @@ function formatAmount(amount: string | null | undefined): string {
   if (amount === undefined || amount === null) {
     return '0';
   }
-  return amount;
+  // Try to parse as BigInt and format, fallback to raw value if invalid
+  try {
+    return formatUnits(BigInt(amount), 18);
+  } catch {
+    return amount;
+  }
 }
 
 // Helper function to format timestamps
@@ -92,7 +97,7 @@ function CountdownTimer({ timestamp }: CountdownTimerProps) {
     return target - now;
   })();
 
-  const [timeRemaining, setTimeRemaining] = useState(() => initialTimeRemaining);
+  const [timeRemaining, setTimeRemaining] = useState<number>(() => initialTimeRemaining);
   const intervalRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
@@ -525,7 +530,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               const balanceAfterDispensation = BigInt(balanceInfo.balance) > BigInt(request.context.dispensation)
                 ? BigInt(balanceInfo.balance) - BigInt(request.context.dispensation)
                 : BigInt(0);
-              if (balanceAfterDispensation >= settlement) {
+              if (balanceAfterDispensation >= settlement && !request.lockDetails?.nonceConsumed) {
                 return (
                   <button
                     onClick={async () => {
@@ -579,7 +584,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             // If we have balance and it's an ERC20, check allowance
             if (balanceInfo.allowance !== undefined) {
               const hasAllowance = BigInt(balanceInfo.allowance) >= settlement;
-              if (hasAllowance) {
+              if (hasAllowance && !request.lockDetails?.nonceConsumed) {
                 return (
                   <button
                     onClick={async () => {
@@ -700,7 +705,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Nonce: </span>
-                  <span className="text-gray-100 break-all">{request.compact.nonce}</span>
+                  <span className={`break-all ${request.lockDetails?.nonceConsumed ? 'text-red-500' : 'text-gray-100'}`}>
+                    {request.compact.nonce}{request.lockDetails?.nonceConsumed ? ' (consumed)' : ''}
+                  </span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
@@ -736,7 +743,8 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Dispensation (quote): </span>
                 <span className="text-gray-100">
-                  {formatAmount(request.context?.dispensation)}
+                  {request.context?.dispensation ? 
+                    Number(formatUnits(BigInt(request.context.dispensation), 18)).toFixed(8).replace(/\.?0+$/, '') : '0'} ETH
                   {request.context?.dispensationUSD && (
                     <span className="ml-1">
                       (${request.context.dispensationUSD.replace(/^\$/, '')})
@@ -833,11 +841,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             <div className="space-y-2">
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Sponsor: </span>
-                <span className="text-gray-100 break-all">{String(request.sponsorSignature)}</span>
+                <span className="text-gray-100 break-all">{request.sponsorSignature}</span>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Allocator: </span>
-                <span className="text-gray-100 break-all">{String(request.allocatorSignature)}</span>
+                <span className="text-gray-100 break-all">{request.allocatorSignature}</span>
               </div>
             </div>
           </section>
@@ -918,7 +926,7 @@ function QuoteDispensation({
   const bufferedDispensation = (BigInt(quoteDispensation) * 105n) / 100n; // Add 5% buffer
   return (
     <span className="text-gray-100">
-      {formatAmount(quoteDispensation)} ({formatAmount(bufferedDispensation.toString())} with 5% buffer)
+      {Number(formatUnits(BigInt(quoteDispensation), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH ({Number(formatUnits(bufferedDispensation, 18)).toFixed(8).replace(/\.?0+$/, '')} ETH with 5% buffer)
     </span>
   );
 }
