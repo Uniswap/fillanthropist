@@ -42,6 +42,12 @@ export function useFill() {
   ) => {
     if (!walletClient || !publicClient) throw new Error('Wallet not connected');
 
+    // Check if mandate has expired
+    const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
+    if (mandate.expires <= currentTimestamp) {
+      throw new Error('Mandate has expired');
+    }
+
     try {
       // Only switch chains if we're not already on the correct chain
       const currentChainId = await walletClient.getChainId();

@@ -271,6 +271,20 @@ app.post('/broadcast', async (req, res) => {
       throw new Error(`Failed to derive claim hash: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
+    // Get lock details
+    try {
+      const lockDetails = await compactService.getLockDetailsWithStatus(
+        Number(payload.chainId),
+        BigInt(payload.compact.id),
+        payload.compact.sponsor as `0x${string}`,
+        BigInt(payload.compact.nonce)
+      );
+      console.log(`[${requestTime}] Lock details for request ID ${payload.compact.id}:`, JSON.stringify(lockDetails, null, 2));
+    } catch (lockError) {
+      console.error(`[${requestTime}] Error getting lock details:`, lockError);
+      // Continue with broadcast even if lock details fails
+    }
+
     // Create the stored request with timestamp and claim hash
     const storedRequest = {
       ...payload,

@@ -667,7 +667,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                     {formatTimestamp(request.compact.expires)}
                     <span className="ml-2">
                       {request.compact.expires ? (
-                        (<CountdownTimer timestamp={request.compact.expires} />)
+                        <CountdownTimer timestamp={request.compact.expires} />
                       ) : null}
                     </span>
                   </span>
@@ -767,7 +767,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                     {formatTimestamp(request.compact.mandate.expires)}
                     <span className="ml-2">
                       {request.compact.mandate.expires ? (
-                        (<CountdownTimer timestamp={request.compact.mandate.expires} />)
+                        <CountdownTimer timestamp={request.compact.mandate.expires} />
                       ) : null}
                     </span>
                   </span>
@@ -830,6 +830,13 @@ function QuoteDispensation({
   useEffect(() => {
     const fetchQuoteDispensation = async () => {
       if (!claimant) return;
+
+      // Check if mandate has expired
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      if (BigInt(mandate.expires) <= BigInt(currentTimestamp)) {
+        setError('Mandate has expired');
+        return;
+      }
       
       try {
         const response = await fetch('/api/quote-dispensation', {
@@ -915,13 +922,42 @@ function AppContent() {
     fetchInitialRequests();
   }, [generateClientKey]);
 
-  const handleWebSocketMessage = useCallback((data: any) => {
+  const handleWebSocketMessage = useCallback(async (data: any) => {
     if (data.type === 'newRequest') {
       const requestWithKey = {
         ...data.payload,
         clientKey: generateClientKey(data.payload)
       };
       setRequests(prev => [requestWithKey, ...prev]);
+
+      // Fetch lock details
+      try {
+        const response = await fetch('/api/lock-details', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chainId: data.payload.chainId,
+            id: data.payload.compact.id,
+            sponsor: data.payload.compact.sponsor,
+            nonce: data.payload.compact.nonce
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch lock details');
+        }
+        
+        const lockDetails = await response.json();
+        console.log('Lock details for request:', {
+          requestId: data.payload.compact.id,
+          chainId: data.payload.chainId,
+          details: lockDetails
+        });
+      } catch (error) {
+        console.error('Error fetching lock details:', error);
+      }
     }
   }, [generateClientKey]);
 
