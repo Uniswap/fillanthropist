@@ -11,6 +11,7 @@ import { checkBalanceAndAllowance } from './utils';
 import { deriveClaimHash } from '../client/utils';
 import { TribunalService } from './services/TribunalService';
 import { TheCompactService } from './services/TheCompactService';
+import { verifyBroadcastRequest } from './signature';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -257,6 +258,12 @@ app.post('/broadcast', async (req, res) => {
     
     // Validate chainId
     if (!payload.chainId) throw new Error('Chain ID is required');
+
+    // Verify signatures
+    const isValid = await verifyBroadcastRequest(payload);
+    if (!isValid) {
+      throw new Error('Invalid signatures');
+    }
 
     // Calculate claim hash
     let claimHash: string;
