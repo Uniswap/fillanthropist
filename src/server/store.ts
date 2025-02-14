@@ -14,16 +14,49 @@ class BroadcastStore {
     });
   }
 
+  private isStaleRequest(request: StoredRequest): boolean {
+    const now = Math.floor(Date.now() / 1000); // Convert to seconds
+    const HOUR_IN_SECONDS = 3600;
+    
+    // Convert string timestamps to numbers (assuming they're in seconds)
+    const compactExpires = parseInt(request.compact.expires);
+    const mandateExpires = parseInt(request.compact.mandate.expires);
+    
+    // Check if either expiration time is more than an hour old
+    return (now - compactExpires > HOUR_IN_SECONDS) || 
+           (now - mandateExpires > HOUR_IN_SECONDS);
+  }
+
+  private removeStaleRequests(): void {
+    for (const [id, request] of this.requests.entries()) {
+      if (this.isStaleRequest(request)) {
+        this.requests.delete(id);
+      }
+    }
+  }
+
   getRequests(): StoredRequest[] {
+    // Remove stale requests before returning
+    this.removeStaleRequests();
+    
+    // Return all remaining requests, sorted by timestamp
     return Array.from(this.requests.values())
       .sort((a, b) => b.timestamp - a.timestamp); // newest first
   }
 
   getRequest(id: string): StoredRequest | undefined {
-    return this.requests.get(id);
+    const request = this.requests.get(id);
+    
+    // If request exists and is stale, remove it and return undefined
+    if (request && this.isStaleRequest(request)) {
+      this.requests.delete(id);
+      return undefined;
+    }
+    
+    return request;
   }
 
-  // Optional: Add method to clear old requests periodically
+  // Method to clear old requests based on storage timestamp
   clearOldRequests(maxAgeMs: number = 24 * 60 * 60 * 1000): void {
     const now = Date.now();
     for (const [id, request] of this.requests.entries()) {
