@@ -15,6 +15,22 @@ const queryClient = new QueryClient();
 
 interface StoredRequest extends BroadcastRequest {
   timestamp: number;
+  lockDetails?: {
+    token: string;
+    allocator: string;
+    resetPeriodSeconds: number;
+    scope: string;
+    tokenInfo?: {
+      name: string;
+      symbol: string;
+      decimals: number;
+    };
+    forcedWithdrawalStatus: {
+      status: string;
+      withdrawableAt: string | null;
+    };
+    nonceConsumed: boolean;
+  };
 }
 
 // Helper function to format amounts - passing through raw values
@@ -663,6 +679,13 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   <span className="text-gray-400">Sponsor: </span>
                   <span className="text-gray-100 break-all">{request.compact.sponsor}</span>
                 </div>
+                {/* Lock Details - Underlying Token */}
+                <div className="p-3 bg-gray-800 rounded text-xs font-mono">
+                  <span className="text-gray-400">Underlying Token: </span>
+                  <span className="text-gray-100 break-all">
+                    {request.lockDetails?.token} {request.lockDetails?.tokenInfo?.symbol ? `(${request.lockDetails.tokenInfo.symbol})` : ''}
+                  </span>
+                </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">ID: </span>
                   <span className="text-gray-100 break-all">{request.compact.id}</span>
@@ -921,10 +944,12 @@ function AppContent() {
           ...request,
           clientKey: generateClientKey(request)
         }));
-        setRequests(requestsWithKeys);
+
+        // Create an array to store requests with lock details
+        const requestsWithLockDetails = [...requestsWithKeys];
 
         // Fetch lock details for each request
-        for (const request of requestsWithKeys) {
+        await Promise.all(requestsWithKeys.map(async (request: StoredRequest & { clientKey: string }, index: number) => {
           try {
             const response = await fetch('/api/lock-details', {
               method: 'POST',
@@ -944,15 +969,18 @@ function AppContent() {
             }
             
             const lockDetails = await response.json();
-            console.log('Lock details for request:', {
-              resourceLockId: request.compact.id,
-              chainId: request.chainId,
-              details: lockDetails
-            });
+            // Update the request with lock details
+            requestsWithLockDetails[index] = {
+              ...request,
+              lockDetails
+            };
           } catch (error) {
             console.error('Error fetching lock details:', error);
           }
-        }
+        }));
+
+        // Set all requests at once after fetching lock details
+        setRequests(requestsWithLockDetails);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to fetch initial requests');
       } finally {
@@ -991,11 +1019,12 @@ function AppContent() {
         }
         
         const lockDetails = await response.json();
-        console.log('Lock details for request:', {
-          requestId: data.payload.compact.id,
-          chainId: data.payload.chainId,
-          details: lockDetails
-        });
+        // Update the request with lock details
+        setRequests(prev => prev.map(r => 
+          r.clientKey === requestWithKey.clientKey 
+            ? { ...r, lockDetails } 
+            : r
+        ));
       } catch (error) {
         console.error('Error fetching lock details:', error);
       }
