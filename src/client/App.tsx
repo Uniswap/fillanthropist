@@ -18,11 +18,10 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format amounts - passing through raw values
-function formatAmount(): string;
 function formatAmount(amount: string): string;
 function formatAmount(amount: undefined): string;
 function formatAmount(amount: null): string;
-function formatAmount(amount?: string | null): string {
+function formatAmount(amount: string | undefined | null): string {
   return amount ?? '0';
 }
 
@@ -369,15 +368,65 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               } gwei
             </span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={sliderValue}
-            onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#00ff00]"
-          />
+          <div className="relative h-3 my-2">
+            {/* Background track with fixed settlement region */}
+            {(() => {
+              // Convert baseline priority fee from wei to gwei
+              const baselinePriorityFeeGwei = Number(request.compact.mandate.baselinePriorityFee) / 1e9;
+              
+              // Calculate slider position based on baseline priority fee
+              let sliderPosition: number;
+              if (baselinePriorityFeeGwei <= 0.01) {
+                // 0-20%: 0 to 0.01 gwei
+                sliderPosition = (baselinePriorityFeeGwei / 0.01) * 20;
+              } else if (baselinePriorityFeeGwei <= 0.1) {
+                // 20-40%: 0.01 to 0.1 gwei
+                sliderPosition = 20 + ((baselinePriorityFeeGwei - 0.01) / 0.09) * 20;
+              } else if (baselinePriorityFeeGwei <= 1) {
+                // 40-50%: 0.1 to 1 gwei
+                sliderPosition = 40 + ((baselinePriorityFeeGwei - 0.1) / 0.9) * 10;
+              } else if (baselinePriorityFeeGwei <= 10) {
+                // 50-90%: 1 to 10 gwei
+                sliderPosition = 50 + ((baselinePriorityFeeGwei - 1) / 9) * 40;
+              } else {
+                // 90-100%: 10 to 100 gwei
+                sliderPosition = 90 + ((baselinePriorityFeeGwei - 10) / 90) * 10;
+              }
+              
+              return (
+                <>
+                  {/* Fixed settlement region */}
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-gray-700 rounded-l-lg transition-all duration-200"
+                    style={{ width: `${sliderPosition}%` }}
+                  />
+                  {/* Yellow line for baseline priority fee */}
+                  <div 
+                    className="absolute -top-1 -bottom-1 w-1 bg-yellow-500/90 shadow-[0_0_8px_rgba(234,179,8,0.5)] group cursor-help"
+                    style={{ left: `${sliderPosition}%` }}
+                  >
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900/95 text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
+                      <div className="text-yellow-500 font-medium mb-1">Baseline Priority Fee</div>
+                      <div className="text-gray-400">
+                        Settlement amount is fixed at minimum to the left.<br/>
+                        Increases with priority fee to the right.
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={sliderValue}
+              onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
+              className="relative w-full h-full bg-gray-800 rounded-lg appearance-none cursor-pointer z-10 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#00ff00] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-[#00ff00] [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-20 [&::-moz-range-thumb]:shadow-md"
+              style={{ WebkitAppearance: 'none' }}
+            />
+          </div>
           <div className="flex justify-between items-center mt-2">
             <span className="text-sm text-gray-400">Settlement Amount:</span>
             <span className={`text-sm font-mono ${(() => {
