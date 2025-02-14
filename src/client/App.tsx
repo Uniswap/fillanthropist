@@ -1120,9 +1120,13 @@ function AppContent() {
             <RequestCard key={request.clientKey} request={request} />
           ))}
 
-          {!isLoading && requests.length === 0 && !error && (
+          {!isLoading && requests.filter(request => {
+            const now = Math.floor(Date.now() / 1000);
+            const compactExpiry = parseInt(request.compact.expires, 10);
+            return compactExpiry + 600 >= now;
+          }).length === 0 && !error && (
             <div className="p-6 bg-[#0a0a0a] rounded-lg shadow-xl border border-gray-800 text-center">
-              <p className="text-gray-400">No broadcast requests received yet.</p>
+              <p className="text-gray-400">Waiting for broadcasted requests...</p>
             </div>
           )}
         </div>
