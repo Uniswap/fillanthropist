@@ -783,7 +783,10 @@ function AppContent() {
       <header className="bg-[#0a0a0a] border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-100">Fillanthropist</h1>
+            <h1 className="text-2xl font-bold text-gray-100 flex items-center gap-4">
+              <span><span className="text-[#00ff00]">Fill</span>anthropist</span>
+              <span>🤲</span>
+            </h1>
             <div className="flex items-center gap-4">
               <ConnectButton />
               {isLoading && (
