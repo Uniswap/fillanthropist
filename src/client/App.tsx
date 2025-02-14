@@ -18,10 +18,11 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format amounts - passing through raw values
+function formatAmount(): string;
 function formatAmount(amount: string): string;
 function formatAmount(amount: undefined): string;
 function formatAmount(amount: null): string;
-function formatAmount(amount: string | undefined | null): string {
+function formatAmount(amount?: string | null): string {
   return amount ?? '0';
 }
 
@@ -675,8 +676,10 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   </span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                  <span className="text-gray-400">Priority Fee: </span>
-                  <span className="text-gray-100">{formatAmount(request.compact.mandate.baselinePriorityFee)}</span>
+                  <span className="text-gray-400">Baseline Priority Fee: </span>
+                  <span className="text-gray-100">
+                    {(Number(request.compact.mandate.baselinePriorityFee) / 1e9).toFixed(3)} gwei
+                  </span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Scale Factor: </span>
