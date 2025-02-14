@@ -751,7 +751,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                <span className="text-gray-400">Dispensation (quote): </span>
+                <span className="text-gray-400">Message Cost (quoted): </span>
                 <span className="text-gray-100">
                   {request.context?.dispensation ? 
                     Number(formatUnits(BigInt(request.context.dispensation), 18)).toFixed(8).replace(/\.?0+$/, '') : '0'} ETH
@@ -763,7 +763,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </span>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                <span className="text-gray-400">Dispensation (latest): </span>
+                <span className="text-gray-400">Message Cost (latest): </span>
                 <QuoteDispensation
                   compact={request.compact}
                   mandate={request.compact.mandate}
@@ -921,7 +921,7 @@ function QuoteDispensation({
 
         const data = await response.json();
         const raw = data.dispensation;
-        const buffered = ((BigInt(data.dispensation) * 105n) / 100n).toString();
+        const buffered = ((BigInt(data.dispensation) * 125n) / 100n).toString();
         const dispensation = { raw, buffered };
         setQuoteDispensation(dispensation);
         onQuoteDispensation(dispensation);
@@ -943,7 +943,7 @@ function QuoteDispensation({
 
   return (
     <span className="text-gray-100">
-      {Number(formatUnits(BigInt(quoteDispensation.raw), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH ({Number(formatUnits(BigInt(quoteDispensation.buffered), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH with 5% buffer)
+      {Number(formatUnits(BigInt(quoteDispensation.raw), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH ({Number(formatUnits(BigInt(quoteDispensation.buffered), 18)).toFixed(8).replace(/\.?0+$/, '')} ETH with 25% buffer)
     </span>
   );
 }

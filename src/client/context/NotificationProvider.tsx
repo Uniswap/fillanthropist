@@ -133,14 +133,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       <p className="mt-1 text-sm text-gray-500">
         Transaction:{' '}
         {blockExplorerUrl ? (
-          <a
-            href={blockExplorerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#00ff00] hover:text-[#33ff33] transition-colors duration-200"
-          >
-            {shortHash}
-          </a>
+          <>
+            <a
+              href={blockExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#00ff00] hover:text-[#33ff33] transition-colors duration-200"
+            >
+              {shortHash}
+            </a>
+            {' • '}
+            <a
+              href={`https://explorer.hyperlane.xyz/?search=${notification.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#00ff00] hover:text-[#33ff33] transition-colors duration-200"
+            >
+              View cross-chain message progress on Hyperlane
+            </a>
+          </>
         ) : (
           <span className="text-[#00ff00]">{shortHash}</span>
         )}
