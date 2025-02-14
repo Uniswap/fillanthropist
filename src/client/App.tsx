@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { deriveSettlementAmount } from './utils';
 import { formatUnits } from 'viem';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
@@ -18,21 +18,15 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format amounts - passing through raw values
-const formatAmount = (amount: string | undefined) => {
+const formatAmount = (amount: string | undefined): string => {
   if (!amount) return '0';
-  try {
-    // Just return the raw amount string
-    return amount;
-  } catch (error) {
-    console.error('Error formatting amount:', error);
-    return '0';
-  }
+  return amount;
 };
 
 // Helper function to format timestamps
 const formatTimestamp = (timestamp: string) => {
-  const date = new Date(parseInt(timestamp) * 1000);
-  return date.toLocaleString(undefined, {
+  const date = new Date(parseInt(timestamp, 10) * 1000);
+  return date.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -51,7 +45,66 @@ interface BalanceInfo {
   decimals?: number;
 }
 
+// CountdownTimer component to display time remaining
+function CountdownTimer({ timestamp }: { timestamp: string }) {
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const intervalRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const target = parseInt(timestamp, 10);
+      const remaining = target - now;
+      setTimeRemaining(remaining);
+    };
+
+    // Initial update
+    updateTimer();
+
+    // Update every second
+    intervalRef.current = setInterval(updateTimer, 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [timestamp]);
+
+  // Get color based on remaining time
+  const getColorClass = () => {
+    if (timeRemaining <= 0) return 'text-red-500';
+    if (timeRemaining < 60) return 'text-yellow-500';
+    return 'text-[#00ff00]';
+  };
+
+  // Format the remaining time
+  const formatTime = () => {
+    if (timeRemaining <= 0) return 'Expired';
+    
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s remaining`;
+    }
+    return `${seconds}s remaining`;
+  };
+
+  return (
+    <span className={getColorClass()}>
+      {formatTime()}
+    </span>
+  );
+}
+
 function RequestCard({ request }: { request: StoredRequest & { clientKey: string } }) {
+  // Filter out requests that expired more than 10 minutes ago
+  const now = Math.floor(Date.now() / 1000);
+  const compactExpiry = parseInt(request.compact.expires, 10);
+  if (compactExpiry + 600 < now) {
+    return null;
+  }
   // Store the raw slider value (0-100) and derived priority fee separately
   const [sliderValue, setSliderValue] = useState(50); // Default to midpoint
   const [priorityFee, setPriorityFee] = useState(1); // Default to 1 gwei (midpoint)
@@ -214,7 +267,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               )}
             </div>
             <div className="text-sm text-gray-400">
-              {new Date(request.timestamp).toLocaleString(undefined, {
+              {new Date(request.timestamp).toLocaleString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
@@ -500,7 +553,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
-                  <span className="text-gray-100">{formatTimestamp(request.compact.expires)}</span>
+                  <span className="text-gray-100">
+                    {formatTimestamp(request.compact.expires)}
+                    <span className="ml-2">
+                      (<CountdownTimer timestamp={request.compact.expires} />)
+                    </span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -585,7 +643,12 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Expires: </span>
-                  <span className="text-gray-100">{formatTimestamp(request.compact.mandate.expires)}</span>
+                  <span className="text-gray-100">
+                    {formatTimestamp(request.compact.mandate.expires)}
+                    <span className="ml-2">
+                      (<CountdownTimer timestamp={request.compact.mandate.expires} />)
+                    </span>
+                  </span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Priority Fee: </span>
