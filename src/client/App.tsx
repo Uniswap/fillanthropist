@@ -18,10 +18,12 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format amounts - passing through raw values
-const formatAmount = (amount: string | undefined): string => {
-  if (!amount) return '0';
-  return amount;
-};
+function formatAmount(amount: string): string;
+function formatAmount(amount: undefined): string;
+function formatAmount(amount: null): string;
+function formatAmount(amount: string | undefined | null): string {
+  return amount ?? '0';
+}
 
 // Helper function to format timestamps
 const formatTimestamp = (timestamp: string) => {
@@ -115,14 +117,27 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   const { approve, approveMax, isLoading: isApproving } = useERC20(request.compact.mandate.token as `0x${string}`);
   const { fill } = useFill();
 
-  // Convert slider value to priority fee using quadratic curve
+  // Convert slider value to priority fee using stepped linear curves
   const handleSliderChange = (value: number) => {
     setSliderValue(value);
-    // At slider value 50 (midpoint) -> 1 gwei
-    // At slider value 100 (max) -> 100 gwei
-    // Use quadratic curve for smooth progression
-    const normalizedValue = value / 100;
-    const priorityFeeGwei = normalizedValue * normalizedValue * 100;
+    // Implement stepped linear curves based on slider percentage
+    let priorityFeeGwei: number;
+    if (value <= 20) {
+      // 0-20%: 0 to 0.01 gwei
+      priorityFeeGwei = (value / 20) * 0.01;
+    } else if (value <= 40) {
+      // 20-40%: 0.01 to 0.1 gwei
+      priorityFeeGwei = 0.01 + ((value - 20) / 20) * 0.09;
+    } else if (value <= 50) {
+      // 40-50%: 0.1 to 1 gwei
+      priorityFeeGwei = 0.1 + ((value - 40) / 10) * 0.9;
+    } else if (value <= 90) {
+      // 50-90%: 1 to 10 gwei
+      priorityFeeGwei = 1 + ((value - 50) / 40) * 9;
+    } else {
+      // 90-100%: 10 to 100 gwei
+      priorityFeeGwei = 10 + ((value - 90) / 10) * 90;
+    }
     setPriorityFee(priorityFeeGwei);
   };
 
