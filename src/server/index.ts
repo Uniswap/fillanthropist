@@ -10,6 +10,7 @@ import { WebSocketManager } from './websocket';
 import { checkBalanceAndAllowance } from './utils';
 import { deriveClaimHash } from '../client/utils';
 import { TribunalService } from './services/TribunalService';
+import { TheCompactService } from './services/TheCompactService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,6 +25,7 @@ const [, , host, port] = serverUrl.match(/^(https?:\/\/)?([^:]+):(\d+)$/) || [];
 
 // Initialize services
 const tribunalService = new TribunalService();
+const compactService = new TheCompactService();
 const wsManager = new WebSocketManager(server);
 
 // Middleware
@@ -61,6 +63,37 @@ app.use(express.json());
 
 // Serve static files from the dist directory
 app.use(express.static(join(__dirname, '../../dist')));
+
+// Get lock details endpoint
+app.post('/api/lock-details', async (req, res) => {
+  const requestTime = new Date().toISOString();
+  console.log(`[${requestTime}] Received POST request to /api/lock-details`);
+
+  try {
+    const { chainId, id, sponsor, nonce } = req.body;
+
+    // Validate request parameters
+    if (!chainId) throw new Error('Chain ID is required');
+    if (!id) throw new Error('Lock ID is required');
+    if (!sponsor || !isValidAddress(sponsor)) throw new Error('Invalid sponsor address');
+    if (!nonce) throw new Error('Nonce is required');
+
+    const details = await compactService.getLockDetailsWithStatus(
+      Number(chainId),
+      BigInt(id),
+      sponsor as `0x${string}`,
+      BigInt(nonce)
+    );
+
+    console.log(`[${requestTime}] Lock details retrieved for ID ${id}`);
+    res.json(details);
+  } catch (error) {
+    console.error('Error getting lock details:', error);
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Invalid lock details request'
+    });
+  }
+});
 
 // Get quote dispensation endpoint
 app.post('/api/quote-dispensation', async (req, res) => {
