@@ -798,11 +798,6 @@ function AppContent() {
                   {isWsConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
-              <div className="px-3 py-1 rounded-full bg-gray-800 border border-gray-700">
-                <span className="text-sm font-medium text-gray-300">
-                  {requests.length} request{requests.length !== 1 ? 's' : ''}
-                </span>
-              </div>
             </div>
           </div>
         </div>
