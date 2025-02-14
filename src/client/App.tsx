@@ -18,20 +18,25 @@ interface StoredRequest extends BroadcastRequest {
 }
 
 // Helper function to format amounts - passing through raw values
-function formatAmount(amount: string | null | undefined = null): string {
-  return amount ?? '0';
+function formatAmount(amount: string | null | undefined): string {
+  if (amount === undefined || amount === null) {
+    return '0';
+  }
+  return amount;
 }
 
 // Helper function to format timestamps
-const formatTimestamp = (timestamp: string | undefined) => {
-  if (!timestamp) return '';
-  const date = new Date(parseInt(timestamp, 10) * 1000);
+const formatTimestamp = (unixTimestamp: string | undefined): string => {
+  if (!unixTimestamp) return '';
+  const timestamp = parseInt(unixTimestamp, 10);
+  if (isNaN(timestamp)) return '';
+  const date = new Date(timestamp * 1000);
   const today = new Date();
   const isToday = date.getDate() === today.getDate() &&
                   date.getMonth() === today.getMonth() &&
                   date.getFullYear() === today.getFullYear();
   
-  return date.toLocaleString('en-US', {
+  const options: Intl.DateTimeFormatOptions = {
     ...(isToday ? {} : {
       year: 'numeric',
       month: 'short',
@@ -39,8 +44,10 @@ const formatTimestamp = (timestamp: string | undefined) => {
     }),
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
-  });
+    second: '2-digit',
+    hour12: true
+  };
+  return new Intl.DateTimeFormat('en-US', options).format(date);
 };
 
 interface BalanceInfo {
@@ -298,14 +305,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               )}
             </div>
             <div className="text-sm text-gray-400">
-              {new Date(request.timestamp).toLocaleString('en-US', {
+              {new Intl.DateTimeFormat('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                second: '2-digit'
-              })}
+                second: '2-digit',
+                hour12: true
+              }).format(new Date(request.timestamp))}
               {request.context?.dispensationUSD !== undefined && (
                 <span className="ml-4 text-[#00ff00]">
                   ${request.context.dispensationUSD.replace(/^\$/, '')} fee
