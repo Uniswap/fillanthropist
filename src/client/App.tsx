@@ -287,7 +287,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                 ID {request.compact.id}
               </span>
               <span className="px-2 py-1 text-xs bg-[#00ff00]/10 text-[#00ff00] rounded">
-                {formatAmount(request.compact.amount)} → {formatAmount(request.compact.mandate.minimumAmount)}
+                {balanceInfo?.decimals 
+                  ? `${formatUnits(BigInt(request.compact.amount), balanceInfo.decimals)} → >= ${formatUnits(BigInt(request.compact.mandate.minimumAmount), balanceInfo.decimals)} ${balanceInfo.symbol}`
+                  : `${formatAmount(request.compact.amount)} → >= ${formatAmount(request.compact.mandate.minimumAmount)}`}
               </span>
               {request.context?.slippageBips !== undefined && (
                 <span className="px-2 py-1 text-xs bg-orange-500/10 text-orange-500 rounded">
