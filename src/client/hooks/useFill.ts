@@ -63,10 +63,13 @@ export function useFill() {
       // Convert gwei to wei for priority fee
       const priorityFeeWei = parseEther(priorityFeeGwei.toString(), 'gwei');
       
-      // Calculate total value to send (settlement + dispensation for native token, just dispensation for ERC20)
+      // Add 5% buffer to dispensation
+      const bufferedDispensation = (BigInt(dispensation) * 105n) / 100n;
+
+      // Calculate total value to send (settlement + buffered dispensation for native token, just buffered dispensation for ERC20)
       const value = mandate.token === '0x0000000000000000000000000000000000000000' 
-        ? BigInt(settlementAmount) + BigInt(dispensation)
-        : BigInt(dispensation);
+        ? BigInt(settlementAmount) + bufferedDispensation
+        : bufferedDispensation;
 
       // Prepare transaction
       const tx = {

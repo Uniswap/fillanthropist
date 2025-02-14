@@ -47,7 +47,7 @@ function formatAmount(amount: string | null | undefined): string {
 }
 
 // Helper function to format timestamps
-const formatTimestamp = (unixTimestamp: string | undefined): string => {
+const formatTimestamp = (unixTimestamp: string | undefined = ''): string => {
   if (!unixTimestamp) return '';
   const timestamp = parseInt(unixTimestamp, 10);
   if (isNaN(timestamp)) return '';
@@ -159,6 +159,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
   const [sliderValue, setSliderValue] = useState(50); // Default to midpoint
   const [priorityFee, setPriorityFee] = useState(1); // Default to 1 gwei (midpoint)
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo | null>(null);
+  const [latestDispensation, setLatestDispensation] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { address } = useAccount();
   const { switchChainAsync } = useSwitchChain();
@@ -562,7 +563,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                           BigInt(request.compact.mandate.chainId),
                           address as `0x${string}`,
                           priorityFee,
-                          request.context.dispensation,
+                          latestDispensation || request.context.dispensation,
                           calculatedSettlement
                         );
                       } catch (error) {
@@ -616,7 +617,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                           BigInt(request.compact.mandate.chainId),
                           address as `0x${string}`,
                           priorityFee,
-                          request.context.dispensation,
+                          latestDispensation || request.context.dispensation,
                           calculatedSettlement
                         );
                       } catch (error) {
@@ -760,6 +761,7 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                   claimant={address || ''}
                   targetChainId={Number(request.chainId)}
                   request={request}
+                  onQuoteDispensation={setLatestDispensation}
                 />
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
@@ -860,14 +862,16 @@ function QuoteDispensation({
   compact, 
   mandate, 
   claimant, 
-  targetChainId ,
-  request
+  targetChainId,
+  request,
+  onQuoteDispensation
 }: { 
   compact: any
   mandate: any
   claimant: string
   targetChainId: number
   request: StoredRequest & { clientKey: string }
+  onQuoteDispensation: (dispensation: string | null) => void
 }) {
   const [quoteDispensation, setQuoteDispensation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -907,6 +911,7 @@ function QuoteDispensation({
 
         const data = await response.json();
         setQuoteDispensation(data.dispensation);
+        onQuoteDispensation(data.dispensation);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to fetch quote dispensation');
       }
