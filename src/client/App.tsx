@@ -270,7 +270,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold text-gray-100 font-mono flex items-center gap-2">
-              <span>Chain {request.chainId}</span>
+              <span>Chain {request.chainId} ({(() => {
+                switch (Number(request.chainId)) {
+                  case 1: return 'Ethereum';
+                  case 10: return 'Optimism';
+                  case 130: return 'Unichain';
+                  case 8453: return 'Base';
+                  default: return 'Unknown';
+                }
+              })()})</span>
               <span className="text-gray-400">·</span>
               <span className="text-sm">{request.claimHash}</span>
             </h3>
@@ -613,7 +621,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Chain ID: </span>
-                  <span className="text-gray-100">{request.chainId}</span>
+                  <span className="text-gray-100">{request.chainId} ({(() => {
+                    switch (Number(request.chainId)) {
+                      case 1: return 'Ethereum';
+                      case 10: return 'Optimism';
+                      case 130: return 'Unichain';
+                      case 8453: return 'Base';
+                      default: return 'Unknown';
+                    }
+                  })()})</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Arbiter: </span>
@@ -709,7 +725,15 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
               <div className="grid grid-cols-1 gap-2">
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Chain ID: </span>
-                  <span className="text-gray-100">{request.compact.mandate.chainId}</span>
+                  <span className="text-gray-100">{request.compact.mandate.chainId} ({(() => {
+                    switch (Number(request.compact.mandate.chainId)) {
+                      case 1: return 'Ethereum';
+                      case 10: return 'Optimism';
+                      case 130: return 'Unichain';
+                      case 8453: return 'Base';
+                      default: return 'Unknown';
+                    }
+                  })()})</span>
                 </div>
                 <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                   <span className="text-gray-400">Tribunal: </span>
@@ -761,11 +785,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             <h4 className="text-sm font-medium text-gray-300 uppercase tracking-wider mb-3">Signatures</h4>
             <div className="space-y-2">
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                <span className="text-gray-400">Sponsor Signature: </span>
+                <span className="text-gray-400">Sponsor: </span>
                 <span className="text-gray-100 break-all">{String(request.sponsorSignature)}</span>
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
-                <span className="text-gray-400">Allocator Signature: </span>
+                <span className="text-gray-400">Allocator: </span>
                 <span className="text-gray-100 break-all">{String(request.allocatorSignature)}</span>
               </div>
             </div>
@@ -934,7 +958,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#050505]">
       <header className="bg-[#0a0a0a] border-b border-gray-800 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-100 flex items-center gap-4">
               <span><span className="text-[#00ff00]">Fill</span>anthropist</span>
@@ -956,7 +980,7 @@ function AppContent() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {error && (
           <div className="p-4 bg-gray-800 border border-red-900/20 rounded-lg mb-6">
             <p className="text-red-400 font-medium">{error}</p>
