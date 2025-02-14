@@ -922,6 +922,37 @@ function AppContent() {
           clientKey: generateClientKey(request)
         }));
         setRequests(requestsWithKeys);
+
+        // Fetch lock details for each request
+        for (const request of requestsWithKeys) {
+          try {
+            const response = await fetch('/api/lock-details', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                chainId: request.chainId,
+                id: request.compact.id,
+                sponsor: request.compact.sponsor,
+                nonce: request.compact.nonce
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to fetch lock details');
+            }
+            
+            const lockDetails = await response.json();
+            console.log('Lock details for request:', {
+              resourceLockId: request.compact.id,
+              chainId: request.chainId,
+              details: lockDetails
+            });
+          } catch (error) {
+            console.error('Error fetching lock details:', error);
+          }
+        }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to fetch initial requests');
       } finally {

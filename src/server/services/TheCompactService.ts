@@ -174,7 +174,11 @@ export class TheCompactService {
 
   private async getTokenInfo(chainId: number, tokenAddress: `0x${string}`) {
     if (tokenAddress === '0x0000000000000000000000000000000000000000') {
-      return undefined
+      return {
+        name: 'Ether',
+        symbol: 'ETH',
+        decimals: 18
+      };
     }
 
     const client = this.getClientForChain(chainId)

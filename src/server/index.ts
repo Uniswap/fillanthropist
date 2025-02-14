@@ -172,7 +172,6 @@ app.post('/api/quote-dispensation', async (req, res) => {
 // Balance check endpoint
 app.post('/api/check-balance', async (req, res) => {
   const requestTime = new Date().toISOString();
-  console.log(`[${requestTime}] Received POST request to /api/check-balance`);
 
   try {
     const request = req.body as BalanceCheckRequest;
@@ -185,7 +184,6 @@ app.post('/api/check-balance', async (req, res) => {
 
     const result = await checkBalanceAndAllowance(request);
     
-    console.log(`[${requestTime}] Balance check completed for account ${request.accountAddress}`);
     res.json(result);
   } catch (error) {
     console.error('Error checking balance:', error);
@@ -228,11 +226,9 @@ const isValidAddress = (value: string) => {
 
 app.post('/broadcast', async (req, res) => {
   const requestTime = new Date().toISOString();
-  console.log(`[${requestTime}] Received POST request to /broadcast`);
   
   try {
     const payload = req.body as BroadcastRequest;
-    console.log(`[${requestTime}] Processing broadcast request ID: ${payload.compact.id}`);
 
     // Validate addresses
     if (!isValidAddress(payload.compact.arbiter)) {
