@@ -52,7 +52,7 @@ enum ResetPeriod {
   ThirtyDays
 }
 
-enum ForcedWithdrawalStatus {
+enum ForcedWithdrawalStatusEnum {
   Disabled,
   Pending,
   Enabled
@@ -81,8 +81,8 @@ interface LockDetails {
   }
 }
 
-interface WithdrawalStatus {
-  status: ForcedWithdrawalStatus
+interface ForcedWithdrawalStatus {
+  status: "Disabled" | "Pending" | "Enabled"
   withdrawableAt: bigint | null
 }
 
@@ -243,19 +243,22 @@ export class TheCompactService {
     })
   }
 
-  async getForcedWithdrawalStatus(chainId: number, sponsor: `0x${string}`, id: bigint): Promise<WithdrawalStatus> {
+  async getForcedWithdrawalStatus(chainId: number, sponsor: `0x${string}`, id: bigint): Promise<ForcedWithdrawalStatus> {
     const client = this.getClientForChain(chainId)
     
-    const [status, withdrawableAt] = await client.readContract({
+    const [statusNum, withdrawableAt] = await client.readContract({
       address: THE_COMPACT_ADDRESS,
       abi: THE_COMPACT_ABI,
       functionName: 'getForcedWithdrawalStatus',
       args: [sponsor, id]
     })
 
+    // Map numeric status to string literal
+    const status = ForcedWithdrawalStatusEnum[statusNum] as "Disabled" | "Pending" | "Enabled"
+    
     return { 
       status,
-      withdrawableAt: status === ForcedWithdrawalStatus.Disabled ? null : withdrawableAt
+      withdrawableAt: statusNum === ForcedWithdrawalStatusEnum.Disabled ? null : withdrawableAt
     }
   }
 
@@ -271,7 +274,7 @@ export class TheCompactService {
     const lockDetails = await this.getLockDetails(chainId, id)
 
     // Then fetch everything else in parallel
-    const [tokenInfo, withdrawalStatus, nonceConsumed] = await Promise.all([
+    const [tokenInfo, forcedWithdrawalStatus, nonceConsumed] = await Promise.all([
       this.getTokenInfo(chainId, lockDetails.token),
       this.getForcedWithdrawalStatus(chainId, sponsor, id),
       this.hasConsumedAllocatorNonce(chainId, nonce, lockDetails.allocator)
@@ -280,7 +283,7 @@ export class TheCompactService {
     return {
       ...lockDetails,
       tokenInfo,
-      withdrawalStatus,
+      forcedWithdrawalStatus,
       nonceConsumed
     }
   }
