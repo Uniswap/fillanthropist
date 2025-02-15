@@ -98,7 +98,7 @@ function CountdownTimer({ timestamp }: CountdownTimerProps) {
   })();
 
   const [timeRemaining, setTimeRemaining] = useState<number>(() => initialTimeRemaining);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const updateTimer = () => {
