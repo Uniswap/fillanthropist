@@ -1,16 +1,17 @@
 {
   "name": "fillanthropist",
   "version": "0.0.1",
-  "author": "0age",
+  "author": "",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "dev:frontend": "vite",
     "dev:server": "nodemon --exec tsx src/server/index.ts",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
+    "prebuild": "rm -rf dist",
     "build:frontend": "vite build",
-    "build:server": "tsc -p tsconfig.server.json",
-    "build": "npm run build:server && npm run build:frontend",
+    "build:server": "esbuild src/server/index.ts --bundle --platform=node --outfile=dist/server/index.js --format=esm --sourcemap --packages=external",
+    "build": "npm run build:server && npm run build:frontend && cp .env dist/server/ 2>/dev/null || true",
     "serve": "vite preview",
     "start": "node dist/server/index.js",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -18,7 +19,6 @@
     "test": "node --test --import tsx src/**/*.test.ts"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
@@ -47,6 +47,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
+    "esbuild": "^0.25.0",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.1.0",

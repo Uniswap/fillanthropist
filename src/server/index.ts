@@ -62,8 +62,8 @@ app.use(cors({
 app.options('/ws', cors());
 app.use(express.json());
 
-// Serve static files from the dist directory
-app.use(express.static(join(__dirname, '../../dist')));
+// Serve static files from the dist/client directory
+app.use(express.static(join(__dirname, '../../dist/client')));
 
 // Get lock details endpoint
 app.post('/api/lock-details', async (req, res) => {
@@ -343,7 +343,7 @@ app.post('/broadcast', async (req, res) => {
 
 // Serve the frontend for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, '../../dist/index.html'));
+  res.sendFile(join(__dirname, '../../dist/client/index.html'));
 });
 
 server.listen(parseInt(port), host, () => {

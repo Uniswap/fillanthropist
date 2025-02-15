@@ -8,6 +8,9 @@ dotenv.config();
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: 'dist/client',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
