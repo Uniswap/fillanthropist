@@ -167,7 +167,7 @@ export class WebSocketManager {
             resolve(false);
           }, 5000);
 
-          const messageHandler = (data: WebSocket.Data) => {
+          const messageHandler = (data: Buffer | ArrayBuffer | Buffer[]) => {
             try {
               const response = JSON.parse(data.toString());
               if (response.type === 'requestReceived' && 
