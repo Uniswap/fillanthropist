@@ -1,16 +1,18 @@
 {
   "name": "fillanthropist",
-  "version": "1.0.0",
+  "version": "0.0.1",
+  "author": "0age",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "dev:frontend": "vite",
     "dev:server": "nodemon --exec tsx src/server/index.ts",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
-    "build": "tsc && vite build",
+    "build:frontend": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build": "npm run build:server && npm run build:frontend",
     "serve": "vite preview",
     "start": "node dist/server/index.js",
-    "build:server": "tsc -p tsconfig.server.json",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "node --test --import tsx src/**/*.test.ts"
