@@ -38,12 +38,12 @@ cp .env.example .env
 npm run dev
 
 # Or run frontend and server separately
-npm run dev:frontend  # Starts Vite dev server
+npm run dev:frontend # Starts Vite dev server
 npm run dev:server   # Starts Express server with hot reload
 
 # For production
 npm run build        # Build frontend and server
-npm start           # Run production server
+npm start            # Run production server
 ```
 
 ## API Documentation
