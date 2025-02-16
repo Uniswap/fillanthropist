@@ -61,7 +61,7 @@ interface BroadcastRequest {
   sponsorSignature: string;       // Signature from the sponsor
   allocatorSignature: string;     // Signature from the allocator
   context: Context;               // Additional context and quote information
-  claimHash?: string;            // Optional derived claim hash
+  claimHash?: string;             // Optional derived claim hash
 }
 
 interface CompactMessage {
