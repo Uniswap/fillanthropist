@@ -104,7 +104,7 @@ interface Context {
 }
 ```
 
-### WebSocket Interface
+### WebSocket & API Interfaces
 
 The application maintains WebSocket connections for real-time updates about order status and events. Clients can connect to receive immediate notifications about any submitted swap requests. Clients can also query the server's api endpoints for recent requests as well as for information like token metadata, balances, approvals, and lock details.
 
