@@ -56,34 +56,34 @@ The broadcast endpoint accepts cross-chain order fill requests. This is the prim
 
 ```typescript
 interface BroadcastRequest {
-  chainId: string;                // Target chain ID
-  compact: CompactMessage;        // Core message data
-  sponsorSignature: string;       // Signature from the sponsor
-  allocatorSignature: string;     // Signature from the allocator
-  context: Context;               // Additional context and quote information
-  claimHash?: string;             // Optional derived claim hash
+  chainId: string;             // Target chain ID where tokens are claimed
+  compact: CompactMessage;     // Core message data for the claim
+  sponsorSignature: string;    // Signature from the sponsor
+  allocatorSignature: string;  // Signature from the allocator
+  context: Context;            // Additional context and quote information
+  claimHash?: string;          // Optional derived claim hash
 }
 
 interface CompactMessage {
-  arbiter: string;               // Address of the arbiter contract
-  sponsor: string;               // Address of the claim sponsor
-  nonce: string;                 // Nonce scoped to allocator for replay protection
-  expires: string;               // Claim must be processed by this time
-  id: string;                    // Unique identifier for the swap
-  amount: string;                // Amount of tokens to swap
-  mandate: Mandate;              // Mandate details
+  arbiter: string;             // Address of the arbiter contract
+  sponsor: string;             // Address of the claim sponsor
+  nonce: string;               // Nonce scoped to allocator for replay protection
+  expires: string;             // Claim must be processed by this time
+  id: string;                  // Unique identifier for the swap
+  amount: string;              // Amount of tokens to swap
+  mandate: Mandate;            // Mandate details
 }
 
 interface Mandate {
-  chainId: number;               // Chain ID for tribunal contract
-  tribunal: string;              // Tribunal contract address
-  recipient: string;             // Required token recipient address
-  expires: string;               // Settlement must be filled by this time
-  token: string;                 // Settlement oken contract address
-  minimumAmount: string;         // Minimum amount that must be supplied
-  baselinePriorityFee: string;   // Base priority fee — amount scaling kicks in at higher priority fees
-  scalingFactor: string;         // Priority gas fee scaling factor
-  salt: string;                  // Unique salt value
+  chainId: number;             // Chain ID for tribunal contract
+  tribunal: string;            // Tribunal contract address
+  recipient: string;           // Required token recipient address
+  expires: string;             // Settlement must be filled by this time
+  token: string;               // Settlement oken contract address
+  minimumAmount: string;       // Minimum amount that must be supplied
+  baselinePriorityFee: string; // Base priority fee — amount scaling kicks in at higher priority fees
+  scalingFactor: string;       // Priority gas fee scaling factor
+  salt: string;                // Unique salt value
 }
 ```
 
