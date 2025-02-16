@@ -15,6 +15,8 @@ Fillanthropist facilitates cross-chain order filling by:
 - Managing WebSocket connections for real-time updates
 - Providing a web3 frontend for submitting transactions using Viem + Wagmi
 
+A hosted version of Fillanthropist can be found at [fillanthropist.org](https://fillanthropist.org/) (though it is not set up for heavy traffic and comes with no uptime guarantees).
+
 ## Installation
 
 ```bash
