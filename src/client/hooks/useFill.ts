@@ -126,11 +126,8 @@ export function useFill() {
         maxFeePerGas: (priorityFeeWei + ((await publicClient.getBlock()).baseFeePerGas! * 120n) / 100n).toString()
       });
 
-      // Prepare transaction
-      const tx = {
-        to: tribunalAddress,
-        value,
-        data: encodeFunctionData({
+      // Prepare transaction data
+      const txData = encodeFunctionData({
           abi: [{
             name: 'fill',
             type: 'function',
@@ -180,10 +177,36 @@ export function useFill() {
           }],
           functionName: 'fill',
           args: [claim, mandate, claimant]
-        }),
+        });
+
+      // Prepare base transaction
+      const baseTx = {
+        to: tribunalAddress,
+        value,
+        data: txData,
         maxPriorityFeePerGas: priorityFeeWei,
         maxFeePerGas: priorityFeeWei + ((await publicClient.getBlock()).baseFeePerGas! * 120n) / 100n
       };
+
+      // Estimate gas and add 25% buffer
+      const estimatedGas = await publicClient.estimateGas({
+        ...baseTx,
+        account: walletClient.account
+      });
+      
+      // Calculate gas with 25% buffer
+      const gasWithBuffer = (estimatedGas * 125n) / 100n;
+      
+      // Prepare final transaction with gas estimate
+      const tx = {
+        ...baseTx,
+        gas: gasWithBuffer
+      };
+
+      console.log('Estimated gas:', {
+        estimated: estimatedGas.toString(),
+        withBuffer: tx.gas.toString()
+      });
 
       // Show initiated notification
       showNotification({
