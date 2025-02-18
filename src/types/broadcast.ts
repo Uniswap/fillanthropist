@@ -48,7 +48,7 @@ export interface BalanceCheckResponse {
 
 export interface Context {
   // Quote-related information
-  dispensation?: string;           // Dispensation amount
+  dispensation: string;            // Dispensation amount
   dispensationUSD?: string;        // USD value of the dispensation
   spotOutputAmount?: string;       // Spot price output amount
   quoteOutputAmountDirect?: string;// Direct quote output amount

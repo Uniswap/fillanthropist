@@ -266,8 +266,6 @@ app.post('/broadcast', async (req, res) => {
       throw new Error('Invalid signatures');
     }
 
-    console.log({ isValid, isOnchainRegistration, claimHash:payload.context.claimHash })
-
     // Update payload with registration status
     payload.isOnchainRegistration = isOnchainRegistration;
 
