@@ -28,7 +28,11 @@ export function useERC20(tokenAddress?: `0x${string}`) {
 
   const { writeContractAsync } = useWriteContract();
 
-  const approve = async (spender: `0x${string}`, amount: bigint | string): Promise<Hash> => {
+  const approve = async (
+    spender: `0x${string}`, 
+    amount: bigint | string,
+    onApprovalSuccess?: () => Promise<void>
+  ): Promise<Hash> => {
     if (!tokenAddress || !address) throw new Error('Not ready');
     if (!publicClient) throw new Error('Public client not available');
 
@@ -89,8 +93,17 @@ export function useERC20(tokenAddress?: `0x${string}`) {
             stage: 'confirmed',
             txHash: hash,
             chainId: chain.id,
-            autoHide: false,
+            autoHide: true,
           });
+
+          // Call the success callback if provided
+          if (onApprovalSuccess) {
+            try {
+              await onApprovalSuccess();
+            } catch (error) {
+              console.error('Error refreshing approval amount:', error);
+            }
+          }
         } else {
           console.log('Transaction reverted');
           showNotification({
@@ -138,7 +151,8 @@ export function useERC20(tokenAddress?: `0x${string}`) {
 
   return {
     approve,
-    approveMax: (spender: `0x${string}`) => approve(spender, MAX_UINT256),
+    approveMax: (spender: `0x${string}`, onApprovalSuccess?: () => Promise<void>) => 
+      approve(spender, MAX_UINT256, onApprovalSuccess),
     isLoading
   };
 }

@@ -142,15 +142,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             >
               {shortHash}
             </a>
-            {' • '}
-            <a
-              href={`https://explorer.hyperlane.xyz/?search=${notification.txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#00ff00] hover:text-[#33ff33] transition-colors duration-200"
-            >
-              View cross-chain message progress on Hyperlane
-            </a>
+            {notification.title.includes('Fill Transaction') && (
+              <>
+                {' • '}
+                <a
+                  href={`https://explorer.hyperlane.xyz/?search=${notification.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#00ff00] hover:text-[#33ff33] transition-colors duration-200"
+                >
+                  View cross-chain message progress on Hyperlane
+                </a>
+              </>
+            )}
           </>
         ) : (
           <span className="text-[#00ff00]">{shortHash}</span>

@@ -272,12 +272,38 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
       console.log('Successfully switched chain');
 
       // Then approve
+      const refreshBalanceInfo = async () => {
+        const response = await fetch('/api/check-balance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chainId: Number(request.compact.mandate.chainId),
+            tribunalAddress: request.compact.mandate.tribunal,
+            tokenAddress: request.compact.mandate.token,
+            accountAddress: address,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch updated balance');
+        }
+
+        const data = await response.json();
+        setBalanceInfo(data);
+      };
+
       if (useMax) {
-        await approveMax(request.compact.mandate.tribunal as `0x${string}`);
+        await approveMax(
+          request.compact.mandate.tribunal as `0x${string}`,
+          refreshBalanceInfo
+        );
       } else {
         await approve(
           request.compact.mandate.tribunal as `0x${string}`,
-          calculatedSettlement
+          calculatedSettlement,
+          refreshBalanceInfo
         );
       }
 
