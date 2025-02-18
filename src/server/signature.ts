@@ -155,7 +155,19 @@ async function verifySignature(
   }
 }
 
-export async function verifyBroadcastRequest(request: BroadcastRequest): Promise<boolean> {
+export async function verifyBroadcastRequest(request: BroadcastRequest): Promise<{ isValid: boolean; isOnchainRegistration: boolean }> {
+  console.log('Received broadcast request:', {
+    chainId: request.chainId,
+    sponsor: request.compact.sponsor,
+    arbiter: request.compact.arbiter,
+    nonce: request.compact.nonce,
+    expires: request.compact.expires,
+    id: request.compact.id,
+    amount: request.compact.amount,
+    sponsorSignature: request.sponsorSignature,
+    allocatorSignature: request.allocatorSignature
+  });
+
   // Get chain prefix based on chainId
   let chainPrefix: string;
   switch (request.chainId) {
@@ -168,7 +180,7 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
     case '8453':
       chainPrefix = CHAIN_PREFIXES.base;
       break;
-    case '1337':
+    case '130':
       chainPrefix = CHAIN_PREFIXES.unichain;
       break;
     default:
@@ -189,20 +201,31 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
   // Try to verify sponsor signature first
   let isSponsorValid = false;
   let registrationStatus = null;
+  let isOnchainRegistration = false;
   
   try {
+    console.log('Attempting to verify sponsor signature for:', {
+      claimHash,
+      sponsorSignature: request.sponsorSignature,
+      sponsor: request.compact.sponsor,
+      chainPrefix
+    });
+    
     isSponsorValid = await verifySignature(
       claimHash,
       request.sponsorSignature,
       request.compact.sponsor,
       chainPrefix
     );
+    
+    console.log('Sponsor signature verification result:', isSponsorValid);
   } catch (error) {
     console.error('Sponsor signature verification failed:', error);
   }
 
   // If sponsor signature is invalid or missing, check registration status
   if (!isSponsorValid) {
+    console.log('Sponsor signature invalid, checking onchain registration...');
     try {
       registrationStatus = await getCompactService().getRegistrationStatus(
         parseInt(request.chainId),
@@ -211,8 +234,15 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
         COMPACT_REGISTRATION_TYPEHASH as `0x${string}`
       );
 
+      console.log('Registration status check result:', {
+        isActive: registrationStatus.isActive,
+        expires: registrationStatus.expires?.toString(),
+        compactExpires: request.compact.expires
+      });
+
       if (registrationStatus.isActive) {
         isSponsorValid = true;
+        isOnchainRegistration = true;
         // Override the sponsor signature with 64 bytes of zeros if registration is active
         request.sponsorSignature = '0x' + '0'.repeat(128);
         // Update expiration to be the minimum of compact.expires and registration.expires
@@ -220,17 +250,26 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
         request.compact.expires = registrationStatus.expires < compactExpires ? 
           registrationStatus.expires.toString() : 
           request.compact.expires;
-        // Set the flag indicating this is using onchain registration
-        request.isOnchainRegistration = true;
       }
     } catch (error) {
-      console.error('Registration status check failed:', error);
+      console.error('Registration status check failed:', {
+        error,
+        chainId: request.chainId,
+        sponsor: request.compact.sponsor,
+        claimHash
+      });
     }
   }
 
   if (!isSponsorValid) {
-    console.error('Invalid sponsor signature and no active registration found');
-    return false;
+    console.error('Verification failed: Invalid sponsor signature and no active registration found', {
+      sponsorSignaturePresent: !!request.sponsorSignature,
+      registrationStatus: registrationStatus ? {
+        isActive: registrationStatus.isActive,
+        expires: registrationStatus.expires?.toString()
+      } : null
+    });
+    return { isValid: false, isOnchainRegistration: false };
   }
 
   // Verify allocator signature
@@ -242,8 +281,8 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
   );
   if (!isAllocatorValid) {
     console.error('Invalid allocator signature');
-    return false;
+    return { isValid: false, isOnchainRegistration };
   }
 
-  return true;
+  return { isValid: true, isOnchainRegistration };
 }

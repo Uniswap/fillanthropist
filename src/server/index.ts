@@ -126,7 +126,10 @@ app.post('/api/quote-dispensation', async (req, res) => {
       return hex.length === 128 && /^[0-9a-fA-F]+$/.test(hex);
     };
     
-    if (!isValidSignature(sponsorSignature)) throw new Error('Invalid sponsor signature format - must be 64 bytes');
+    // Only validate sponsor signature if not an onchain registration
+    if (!req.body.isOnchainRegistration && !isValidSignature(sponsorSignature)) {
+      throw new Error('Invalid sponsor signature format - must be 64 bytes');
+    }
     if (!isValidSignature(allocatorSignature)) throw new Error('Invalid allocator signature format - must be 64 bytes');
 
     // Transform data for TribunalService
@@ -138,7 +141,8 @@ app.post('/api/quote-dispensation', async (req, res) => {
       expires: BigInt(compact.expires),
       id: BigInt(compact.id),
       maximumAmount: BigInt(compact.amount), // Convert amount to maximumAmount
-      sponsorSignature: sponsorSignature,
+      // If this is an onchain registration, use 64 bytes of zeros for the sponsor signature
+      sponsorSignature: req.body.isOnchainRegistration ? '0x' + '0'.repeat(128) : sponsorSignature,
       allocatorSignature: allocatorSignature
     };
 
@@ -248,10 +252,7 @@ app.post('/broadcast', async (req, res) => {
       throw new Error('Invalid token address format');
     }
 
-    // Validate signatures
-    if (!isValidHexString(payload.sponsorSignature)) {
-      throw new Error('Invalid sponsor signature format');
-    }
+    // Validate allocator signature
     if (!isValidHexString(payload.allocatorSignature)) {
       throw new Error('Invalid allocator signature format');
     }
@@ -259,11 +260,16 @@ app.post('/broadcast', async (req, res) => {
     // Validate chainId
     if (!payload.chainId) throw new Error('Chain ID is required');
 
-    // Verify signatures
-    const isValid = await verifyBroadcastRequest(payload);
+    // Verify signatures and get registration status
+    const { isValid, isOnchainRegistration } = await verifyBroadcastRequest(payload);
     if (!isValid) {
       throw new Error('Invalid signatures');
     }
+
+    console.log({ isValid, isOnchainRegistration, claimHash:payload.context.claimHash })
+
+    // Update payload with registration status
+    payload.isOnchainRegistration = isOnchainRegistration;
 
     // Calculate claim hash
     let claimHash: string;
@@ -272,6 +278,15 @@ app.post('/broadcast', async (req, res) => {
     } catch (error) {
       // Re-throw validation errors with more context
       throw new Error(`Failed to derive claim hash: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    console.log({ claimHash, isOnchainRegistration })
+
+    // Validate sponsor signature
+    if (!isOnchainRegistration) {
+      if (!isValidHexString(payload.sponsorSignature)) {
+        throw new Error('Invalid sponsor signature format');
+      }
     }
 
     // Get lock details
