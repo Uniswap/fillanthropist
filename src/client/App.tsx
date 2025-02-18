@@ -396,7 +396,9 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
                     <div className="text-sm">
                       <span className="text-gray-400">{balanceInfo.symbol} allowance: </span>
                       <span className="text-[#00ff00] font-mono">
-                        {formatUnits(BigInt(balanceInfo.allowance || '0'), balanceInfo.decimals || 18)}
+                        {BigInt(balanceInfo.allowance || '0') > BigInt('0xffffffffffffffffffffffffffffffffffffffff') 
+                          ? 'Max'
+                          : formatUnits(BigInt(balanceInfo.allowance || '0'), balanceInfo.decimals || 18)}
                       </span>
                     </div>
                   )}
