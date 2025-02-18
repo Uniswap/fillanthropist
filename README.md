@@ -38,12 +38,12 @@ cp .env.example .env
 npm run dev
 
 # Or run frontend and server separately
-npm run dev:frontend  # Starts Vite dev server
+npm run dev:frontend # Starts Vite dev server
 npm run dev:server   # Starts Express server with hot reload
 
 # For production
 npm run build        # Build frontend and server
-npm start           # Run production server
+npm start            # Run production server
 ```
 
 ## API Documentation
@@ -56,57 +56,57 @@ The broadcast endpoint accepts cross-chain order fill requests. This is the prim
 
 ```typescript
 interface BroadcastRequest {
-  chainId: string;                // Target chain ID
-  compact: CompactMessage;        // Core message data
-  sponsorSignature: string;       // Signature from the sponsor
-  allocatorSignature: string;     // Signature from the allocator
-  context: Context;               // Additional context and quote information
-  claimHash?: string;            // Optional derived claim hash
+  chainId: string;             // Target chain ID where tokens are claimed
+  compact: CompactMessage;     // Core message data for the claim
+  sponsorSignature: string;    // Signature from the sponsor
+  allocatorSignature: string;  // Signature from the allocator
+  context: Context;            // Additional context and quote information
+  claimHash?: string;          // Optional derived claim hash
 }
 
 interface CompactMessage {
-  arbiter: string;               // Address of the arbiter contract
-  sponsor: string;               // Address of the sponsor
-  nonce: string;                 // Transaction nonce
-  expires: string;               // Expiration timestamp
-  id: string;                    // Unique identifier for the swap
-  amount: string;                // Amount of tokens to swap
-  mandate: Mandate;              // Mandate details
+  arbiter: string;             // Address of the arbiter contract
+  sponsor: string;             // Address of the claim sponsor
+  nonce: string;               // Nonce scoped to allocator for replay protection
+  expires: string;             // Claim must be processed by this time
+  id: string;                  // Unique identifier for the swap
+  amount: string;              // Amount of tokens to swap
+  mandate: Mandate;            // Mandate details
 }
 
 interface Mandate {
-  chainId: number;               // Chain ID for tribunal contract
-  tribunal: string;              // Tribunal contract address
-  recipient: string;             // Token recipient address
-  expires: string;               // Mandate expiration
-  token: string;                 // Token contract address
-  minimumAmount: string;         // Minimum receive amount
-  baselinePriorityFee: string;   // Base priority fee
-  scalingFactor: string;         // Fee scaling factor
-  salt: string;                  // Unique salt value
+  chainId: number;             // Chain ID for tribunal contract
+  tribunal: string;            // Tribunal contract address
+  recipient: string;           // Required token recipient address
+  expires: string;             // Settlement must be filled by this time
+  token: string;               // Settlement oken contract address
+  minimumAmount: string;       // Minimum amount that must be supplied
+  baselinePriorityFee: string; // Base priority fee — amount scaling kicks in at higher priority fees
+  scalingFactor: string;       // Priority gas fee scaling factor
+  salt: string;                // Unique salt value
 }
 ```
 
 #### Context Information
 
-The context object provides additional information about the order:
+The context object provides additional information about the order; it's not strictly necessary, but gives the filler more helpful information about the swap:
 
 ```typescript
 interface Context {
-  dispensation: string;           // Dispensation amount
+  dispensation: string;           // Expected cross-chain message cost
   dispensationUSD: string;        // USD value of dispensation
-  spotOutputAmount: string;       // Spot price output
-  quoteOutputAmountDirect: string;// Direct quote output
+  spotOutputAmount: string;       // Spot price output from CoinGecko
+  quoteOutputAmountDirect: string;// Direct quote output from Uniswap
   quoteOutputAmountNet: string;   // Net output after fees
-  slippageBips: number;          // Slippage tolerance (basis points)
+  slippageBips: number;           // Slippage tolerance (basis points)
   witnessTypeString: string;      // EIP-712 type string
-  witnessHash: string;           // Mandate witness hash
+  witnessHash: string;            // Mandate witness hash
 }
 ```
 
-### WebSocket Interface
+### WebSocket & API Interfaces
 
-The application maintains WebSocket connections for real-time updates about order status and events. Clients can connect to receive immediate notifications about their submitted orders.
+The application maintains WebSocket connections for real-time updates about order status and events. Clients can connect to receive immediate notifications about any submitted swap requests. Clients can also query the server's api endpoints for recent requests as well as for information like token metadata, balances, approvals, and lock details.
 
 ## Development
 
@@ -123,11 +123,7 @@ npm run test
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and configure the following variables:
-- Server port settings
-- Network configurations
-- API keys (if required)
-- Other environment-specific variables
+Copy `.env.example` to `.env` and configure variables like RPC URLs and WalletConnect IDs as necessary.
 
 ## License
 
