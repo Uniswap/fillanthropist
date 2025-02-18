@@ -38,6 +38,20 @@ const THE_COMPACT_ABI = [
     ],
     stateMutability: 'view',
     type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'sponsor', type: 'address' },
+      { name: 'claimHash', type: 'bytes32' },
+      { name: 'typehash', type: 'bytes32' }
+    ],
+    name: 'getRegistrationStatus',
+    outputs: [
+      { name: 'isActive', type: 'bool' },
+      { name: 'expires', type: 'uint256' }
+    ],
+    stateMutability: 'view',
+    type: 'function'
   }
 ] as const
 
@@ -84,6 +98,11 @@ interface LockDetails {
 interface ForcedWithdrawalStatus {
   status: "Disabled" | "Pending" | "Enabled"
   withdrawableAt: bigint | null
+}
+
+interface RegistrationStatus {
+  isActive: boolean
+  expires: bigint
 }
 
 export class TheCompactService {
@@ -260,6 +279,24 @@ export class TheCompactService {
       status,
       withdrawableAt: statusNum === ForcedWithdrawalStatusEnum.Disabled ? null : withdrawableAt
     }
+  }
+
+  async getRegistrationStatus(
+    chainId: number,
+    sponsor: `0x${string}`,
+    claimHash: `0x${string}`,
+    typehash: `0x${string}`
+  ): Promise<RegistrationStatus> {
+    const client = this.getClientForChain(chainId)
+    
+    const [isActive, expires] = await client.readContract({
+      address: THE_COMPACT_ADDRESS,
+      abi: THE_COMPACT_ABI,
+      functionName: 'getRegistrationStatus',
+      args: [sponsor, claimHash, typehash]
+    })
+
+    return { isActive, expires }
   }
 
   async getLockDetailsWithStatus(

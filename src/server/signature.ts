@@ -8,6 +8,7 @@ import {
   encodeAbiParameters,
 } from 'viem';
 import type { BroadcastRequest, Mandate } from '../types/broadcast';
+import { TheCompactService } from './services/TheCompactService';
 
 // Chain-specific prefixes for signature verification
 const CHAIN_PREFIXES = {
@@ -19,6 +20,19 @@ const CHAIN_PREFIXES = {
 
 // Allocator address for signature verification
 const ALLOCATOR_ADDRESS = '0x51044301738Ba2a27bd9332510565eBE9F03546b';
+
+// The Compact typehash for registration checks
+const COMPACT_REGISTRATION_TYPEHASH = '0x27f09e0bb8ce2ae63380578af7af85055d3ada248c502e2378b85bc3d05ee0b0' as const;
+
+// Initialize TheCompactService lazily
+let theCompactService: TheCompactService | null = null;
+
+function getCompactService(): TheCompactService {
+  if (!theCompactService) {
+    theCompactService = new TheCompactService();
+  }
+  return theCompactService;
+}
 
 export function deriveClaimHash(
   arbiter: string,
@@ -172,15 +186,50 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
     request.compact.mandate
   );
 
-  // Verify sponsor signature
-  const isSponsorValid = await verifySignature(
-    claimHash,
-    request.sponsorSignature,
-    request.compact.sponsor,
-    chainPrefix
-  );
+  // Try to verify sponsor signature first
+  let isSponsorValid = false;
+  let registrationStatus = null;
+  
+  try {
+    isSponsorValid = await verifySignature(
+      claimHash,
+      request.sponsorSignature,
+      request.compact.sponsor,
+      chainPrefix
+    );
+  } catch (error) {
+    console.error('Sponsor signature verification failed:', error);
+  }
+
+  // If sponsor signature is invalid or missing, check registration status
   if (!isSponsorValid) {
-    console.error('Invalid sponsor signature');
+    try {
+      registrationStatus = await getCompactService().getRegistrationStatus(
+        parseInt(request.chainId),
+        request.compact.sponsor as `0x${string}`,
+        claimHash as `0x${string}`,
+        COMPACT_REGISTRATION_TYPEHASH as `0x${string}`
+      );
+
+      if (registrationStatus.isActive) {
+        isSponsorValid = true;
+        // Override the sponsor signature with 64 bytes of zeros if registration is active
+        request.sponsorSignature = '0x' + '0'.repeat(128);
+        // Update expiration to be the minimum of compact.expires and registration.expires
+        const compactExpires = BigInt(request.compact.expires);
+        request.compact.expires = registrationStatus.expires < compactExpires ? 
+          registrationStatus.expires.toString() : 
+          request.compact.expires;
+        // Set the flag indicating this is using onchain registration
+        request.isOnchainRegistration = true;
+      }
+    } catch (error) {
+      console.error('Registration status check failed:', error);
+    }
+  }
+
+  if (!isSponsorValid) {
+    console.error('Invalid sponsor signature and no active registration found');
     return false;
   }
 

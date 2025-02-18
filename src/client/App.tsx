@@ -852,7 +852,11 @@ function RequestCard({ request }: { request: StoredRequest & { clientKey: string
             <div className="space-y-2">
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Sponsor: </span>
-                <span className="text-gray-100 break-all">{request.sponsorSignature}</span>
+                {request.isOnchainRegistration ? (
+                  <span className="text-[#00ff00]">onchain registration</span>
+                ) : (
+                  <span className="text-gray-100 break-all">{request.sponsorSignature}</span>
+                )}
               </div>
               <div className="p-3 bg-gray-800 rounded text-xs font-mono">
                 <span className="text-gray-400">Allocator: </span>
