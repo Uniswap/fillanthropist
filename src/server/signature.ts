@@ -10,6 +10,20 @@ import {
 import type { BroadcastRequest, Mandate } from '../types/broadcast';
 import { TheCompactService } from './services/TheCompactService';
 
+// Allocator configuration
+export const ALLOCATORS = {
+  AUTOCATOR: {
+    id: '1730150456036417775412616585',
+    signingAddress: '0x4491fB95F2d51416688D4862f0cAeFE5281Fa3d9', // used to verify signatures from server
+    url: 'https://autocator.org',
+  },
+  SMALLOCATOR: {
+    id: '1223867955028248789127899354',
+    signingAddress: '0x51044301738Ba2a27bd9332510565eBE9F03546b',
+    url: 'https://smallocator.xyz',
+  },
+} as const;
+
 // Chain-specific prefixes for signature verification
 const CHAIN_PREFIXES = {
   ethereum: '0x1901afbd5f3d34c216b31ba8b82d0b32ae91e4edea92dd5bbf4c1ad028f72364a211',
@@ -17,9 +31,6 @@ const CHAIN_PREFIXES = {
   base: '0x1901a1324f3bfe91ee592367ae7552e9348145e65b410335d72e4507dcedeb41bf52',
   optimism: '0x1901ea25de9c16847077fe9d95916c29598dc64f4850ba02c5dbe7800d2e2ecb338e',
 } as const;
-
-// Allocator address for signature verification
-const ALLOCATOR_ADDRESS = '0x51044301738Ba2a27bd9332510565eBE9F03546b';
 
 // The Compact typehash for registration checks
 const COMPACT_REGISTRATION_TYPEHASH = '0x27f09e0bb8ce2ae63380578af7af85055d3ada248c502e2378b85bc3d05ee0b0' as const;
@@ -187,8 +198,8 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
       throw new Error(`Unsupported chain ID: ${request.chainId}`);
   }
 
-  // Derive claim hash if not provided
-  const claimHash = request.claimHash || deriveClaimHash(
+  // Derive claim hash
+  const claimHash = deriveClaimHash(
     request.compact.arbiter,
     request.compact.sponsor,
     request.compact.nonce || '',
@@ -272,15 +283,43 @@ export async function verifyBroadcastRequest(request: BroadcastRequest): Promise
     return { isValid: false, isOnchainRegistration: false };
   }
 
+  // Extract allocator ID from compact.id
+  const extractAllocatorId = (compactId: string): string => {
+    const compactIdBigInt = BigInt(compactId);
+    // Shift right by 160 bits to remove the input token part
+    // Then mask to get only the allocator ID bits (92 bits)
+    const allocatorIdBigInt = (compactIdBigInt >> 160n) & ((1n << 92n) - 1n);
+    return allocatorIdBigInt.toString();
+  };
+
+  // Get allocator ID from compact.id
+  const allocatorId = extractAllocatorId(request.compact.id);
+  console.log('Extracted allocator ID:', allocatorId);
+
+  // Find the matching allocator
+  let allocatorAddress: string | undefined;
+  for (const [name, allocator] of Object.entries(ALLOCATORS)) {
+    if (allocator.id === allocatorId) {
+      allocatorAddress = allocator.signingAddress;
+      console.log(`Found matching allocator: ${name} with address ${allocatorAddress}`);
+      break;
+    }
+  }
+
+  if (!allocatorAddress) {
+    console.error(`No allocator found for ID: ${allocatorId}`);
+    return { isValid: false, isOnchainRegistration };
+  }
+
   // Verify allocator signature
   const isAllocatorValid = await verifySignature(
     claimHash,
     request.allocatorSignature,
-    ALLOCATOR_ADDRESS,
+    allocatorAddress,
     chainPrefix
   );
   if (!isAllocatorValid) {
-    console.error('Invalid allocator signature');
+    console.error(`Invalid allocator signature for allocator ID ${allocatorId} with address ${allocatorAddress}`);
     return { isValid: false, isOnchainRegistration };
   }
 
